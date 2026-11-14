@@ -19,21 +19,23 @@
 
 /* High-contrast dark version: black background, yellow text. */
 :root[data-theme="contrast"] {
+  /* Yellow is for text and things you can press; structure is neutral gray. */
   --bg: #000000;
-  --card: #000000;
+  --card: #0b0b0b;
   --text: #ffe600;
-  --text-sub: #ffe600;
-  --line: #ffe600;
+  --text-sub: #e9dd7a;
+  --line: #3d3d3d;
   --accent: #ffe600;
-  --accent-soft: #1f1c00;
-  --ok: #5cff8f;
-  --ok-soft: #002912;
+  --accent-soft: #1c1c1c;
+  --ok: #4ade80;
+  --ok-soft: transparent;
   --bad: #ff6b6b;
-  --bad-soft: #330000;
+  --bad-soft: transparent;
   --on-accent: #000000;
   --on-status: #000000;
-  --card-border: #ffe600;
-  --warn-soft: #1f1c00;
+  --card-border: #2e2e2e;
+  --warn-soft: #1c1c1c;
+  --control-border: #ffe600;
 }
 
 * {
@@ -846,40 +848,84 @@ button {
   border: 1px solid var(--line);
 }
 
-/* High-contrast tweaks for controls that use fills */
+/* High-contrast tweaks */
 :root[data-theme="contrast"] .fault-btn,
 :root[data-theme="contrast"] .reset-btn,
-:root[data-theme="contrast"] .badge,
 :root[data-theme="contrast"] .header-btn,
-:root[data-theme="contrast"] .segmented,
-:root[data-theme="contrast"] .input,
 :root[data-theme="contrast"] .btn-soft,
-:root[data-theme="contrast"] .stratum-state {
-  border: 2px solid var(--line);
+:root[data-theme="contrast"] .input {
+  background: transparent;
+  border: 2px solid var(--control-border);
+  color: var(--text);
 }
 
 :root[data-theme="contrast"] .fault-btn:hover,
+:root[data-theme="contrast"] .reset-btn:hover:not(:disabled),
 :root[data-theme="contrast"] .header-btn:hover {
   background: var(--accent-soft);
 }
 
 :root[data-theme="contrast"] .fault-btn-active,
+:root[data-theme="contrast"] .fault-btn-active:hover,
 :root[data-theme="contrast"] .segment-on {
   background: var(--accent);
   color: var(--on-accent);
+  box-shadow: none;
 }
 
+:root[data-theme="contrast"] .badge {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-sub);
+}
+
+:root[data-theme="contrast"] .segmented {
+  border: 1px solid var(--line);
+}
+
+/* Status: colored outline + label, no muddy tinted fills. */
 :root[data-theme="contrast"] .stratum-ok .stratum-state {
   color: var(--ok);
-  border-color: var(--ok);
+  border: 1.5px solid var(--ok);
+  background: transparent;
+}
+
+:root[data-theme="contrast"] .stratum-problem {
+  box-shadow: inset 0 0 0 2px var(--bad);
 }
 
 :root[data-theme="contrast"] .stratum-problem .stratum-state {
-  border-color: var(--bad);
+  background: var(--bad);
+  color: var(--on-status);
+}
+
+:root[data-theme="contrast"] .stratum-unmeasured .stratum-state {
+  background: transparent;
+  border: 1.5px solid var(--line);
+  color: var(--text-sub);
+}
+
+:root[data-theme="contrast"] .stratum-digging {
+  background: var(--accent-soft);
 }
 
 :root[data-theme="contrast"] .stratum-icon {
-  background: #ffffff;
+  background: #1a1a1a;
+}
+
+:root[data-theme="contrast"] .prob-bar {
+  background: #262626;
+}
+
+:root[data-theme="contrast"] .anomaly-ok,
+:root[data-theme="contrast"] .anomaly-info,
+:root[data-theme="contrast"] .anomaly-warn {
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+}
+
+:root[data-theme="contrast"] .anomaly-warn {
+  border-color: var(--accent);
 }
 
 :root[data-theme="contrast"] .overlay {
@@ -889,7 +935,7 @@ button {
 :root[data-theme="contrast"] .dialog,
 :root[data-theme="contrast"] .chart-tooltip,
 :root[data-theme="contrast"] .license {
-  border: 2px solid var(--line);
+  border: 1px solid var(--line);
 }
 
 :root[data-theme="contrast"] .info a,

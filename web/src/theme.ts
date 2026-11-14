@@ -27,5 +27,5 @@ export function useTheme(): [Theme, (t: Theme) => void] {
 /** Chart colors per theme (Recharts takes literal colors, not CSS variables). */
 export const CHART_COLORS: Record<Theme, { latency: string; jitter: string; grid: string; axis: string; marker: string; surface: string }> = {
   light: { latency: "#2563EB", jitter: "#8B95A1", grid: "#E5E8EB", axis: "#8B95A1", marker: "#4E5968", surface: "#FFFFFF" },
-  contrast: { latency: "#FFE600", jitter: "#FFFFFF", grid: "#4D4500", axis: "#FFE600", marker: "#FFFFFF", surface: "#000000" },
+  contrast: { latency: "#FFE600", jitter: "#FFFFFF", grid: "#2E2E2E", axis: "#E9DD7A", marker: "#B8B8B8", surface: "#0B0B0B" },
 };
