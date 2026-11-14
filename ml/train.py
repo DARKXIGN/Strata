@@ -6,8 +6,10 @@ inflate accuracy (CLAUDE.md). The final model is then fit on all rows.
 
     .venv/bin/python -m ml.train data/raw/main.csv
 
-Writes models/classifier.txt, models/meta.json and, for slides,
-models/eval/confusion_matrix.png and models/eval/feature_importance.png.
+Also fits the anomaly detector (ml/anomaly.py) on normal rows only.
+
+Writes models/classifier.txt, models/meta.json, models/anomaly.json, models/anomaly.pkl
+and, for slides, models/eval/confusion_matrix.png and models/eval/feature_importance.png.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from faults import LABELS
+from ml.anomaly import AnomalyDetector
 from ml.features import MODEL_FEATURES, vectorize
 from ml.model import META_FILE, MODEL_DIR, MODEL_FILE
 
@@ -80,6 +83,25 @@ def cross_validate(X, y, groups, folds: int) -> tuple[np.ndarray, list[float]]:
         oof[test_idx] = proba
         fold_acc.append(float((proba.argmax(1) == y[test_idx]).mean()))
     return oof, fold_acc
+
+
+def evaluate_anomaly(X, y, groups, folds: int) -> dict:
+    """Fit on normal sessions of each fold; false-positive rate on held-out normal
+    sessions and the share of each fault's rows flagged as unusual."""
+    from sklearn.model_selection import GroupKFold
+
+    normal = LABELS.index("normal")
+    Xn, gn = X[y == normal], groups[y == normal]
+    fp, flagged = [], {label: [] for label in LABELS if label != "normal"}
+    for train_idx, test_idx in GroupKFold(n_splits=folds).split(Xn, groups=gn):
+        det = AnomalyDetector.fit(Xn[train_idx])
+        fp.append(float(det.flags(Xn[test_idx]).mean()))
+        for label in flagged:
+            flagged[label].append(float(det.flags(X[y == LABELS.index(label)]).mean()))
+    return {
+        "normal_false_positive": round(float(np.mean(fp)), 4),
+        "faults_flagged": {label: round(float(np.mean(v)), 4) for label, v in flagged.items()},
+    }
 
 
 def plot_confusion(cm: np.ndarray, path: Path) -> None:
@@ -168,6 +190,12 @@ def main() -> None:
     for label, row in zip(LABELS, cm):
         print(f"  {' '.join(f'{v:8d}' for v in row)}  {label}")
 
+    anomaly_eval = evaluate_anomaly(X, y, groups, args.folds)
+    print(f"anomaly detector (normal-only, session-grouped): normal flagged "
+          f"{anomaly_eval['normal_false_positive']:.1%}; faults flagged "
+          + ", ".join(f"{k} {v:.0%}" for k, v in anomaly_eval["faults_flagged"].items()))
+    detector = AnomalyDetector.fit(X[y == LABELS.index("normal")])
+
     final = make_model().fit(X, y)
     gain = final.booster_.feature_importance(importance_type="gain")
 
@@ -190,14 +218,19 @@ def main() -> None:
             "fold_accuracy": [round(a, 4) for a in fold_acc],
             "confusion_matrix": cm.tolist(),
         },
+        "anomaly": anomaly_eval,
         "importance_gain": {MODEL_FEATURES[i]: round(float(g), 2) for i, g in enumerate(gain)},
     }
     (out / META_FILE.name).write_text(json.dumps(meta, indent=2))
+    detector.save(out / "anomaly.json", out / "anomaly.pkl")
     plot_confusion(cm, out / "eval" / "confusion_matrix.png")
     plot_importance(gain, out / "eval" / "feature_importance.png")
     (out / "eval" / "report.txt").write_text(
         f"session-grouped {args.folds}-fold CV on {len(y)} rows / {sessions} sessions\n"
-        f"accuracy {acc:.3f}, macro F1 {f1:.3f}\n\n{report}"
+        f"accuracy {acc:.3f}, macro F1 {f1:.3f}\n\n{report}\n"
+        f"anomaly detector trained on normal rows only (session-grouped {args.folds}-fold):\n"
+        f"  normal rows flagged: {anomaly_eval['normal_false_positive']:.1%}\n"
+        + "".join(f"  {k} rows flagged: {v:.1%}\n" for k, v in anomaly_eval["faults_flagged"].items())
     )
     print(f"saved {model_file}, {out / META_FILE.name}, {out / 'eval'}/")
 

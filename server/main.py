@@ -30,13 +30,15 @@ from explain import config as explain_config
 from explain.service import ExplainService
 from faults import INJECTABLE, LABEL_LAYER, LABELS, LAYERS
 from faults.sim import SimFaultController
-from ml.model import Classifier
+from ml.anomaly import AnomalyDetector
+from ml.model import MODEL_DIR, Classifier
 
 log = logging.getLogger("strata")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 settings = load_settings()
 classifier = Classifier.load()
+anomaly = AnomalyDetector.load(MODEL_DIR / "anomaly.json", MODEL_DIR / "anomaly.pkl")
 explainer = ExplainService()
 mode, mode_reason = ("sim", settings.sim_reason) if settings.sim_mode else ("real", "real")
 collector = None
@@ -133,7 +135,9 @@ def build_tick(row: dict, measured_at: float) -> dict:
             "layer": LABEL_LAYER.get(label),
             "layers": layer_status(label),
             "model": classifier.kind,
+            "contributions": classifier.contributions(row, label),
         },
+        "anomaly": anomaly.check(row) if anomaly else None,
         "explanation": explainer.explain(label, probs, row, LABEL_LAYER.get(label)),
         "fault": {
             "active": state.name,
@@ -185,6 +189,7 @@ def status() -> dict:
         "fault_mode": faults.mode,
         "explain_mode": explainer.settings.mode,
         "model": classifier.info(),
+        "anomaly_detector": None if anomaly is None else ("forest+range" if anomaly.forest else "range only"),
         "labels": LABELS,
         "layers": LAYERS,
         "injectable": INJECTABLE,

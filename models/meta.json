@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-11-14T21:28:37",
+  "trained_at": "2026-11-14T22:02:06",
   "data": [
     "data/raw/main.csv"
   ],
@@ -109,6 +109,16 @@
         198
       ]
     ]
+  },
+  "anomaly": {
+    "normal_false_positive": 0.025,
+    "faults_flagged": {
+      "high_latency": 1.0,
+      "packet_loss": 0.85,
+      "bandwidth_limit": 1.0,
+      "dns_slow": 1.0,
+      "dns_failure": 1.0
+    }
   },
   "importance_gain": {
     "gw_rtt_ms": 410.51,

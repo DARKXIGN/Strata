@@ -56,6 +56,30 @@ class Classifier:
         probs = self.predict_proba(row)
         return max(probs, key=probs.get), probs
 
+    def contributions(self, row: FeatureRow, label: str, top: int = 6) -> list[dict]:
+        """Per-feature SHAP contributions (LightGBM pred_contrib) toward `label`, largest first.
+
+        Positive values pushed the model toward this label, negative ones away from it.
+        Units are raw model score (log-odds), comparable within one prediction.
+        """
+        if self.booster is None or label not in self.meta.get("labels", []):
+            return []
+        vec = vectorize(row)
+        n = len(MODEL_FEATURES)
+        k = self.meta["labels"].index(label)
+        contrib = self.booster.predict([vec], pred_contrib=True)[0]
+        mine = contrib[k * (n + 1): (k + 1) * (n + 1) - 1]  # last slot per class is the bias
+        order = sorted(range(n), key=lambda i: abs(mine[i]), reverse=True)[:top]
+        return [
+            {
+                "feature": MODEL_FEATURES[i],
+                "value": None if vec[i] != vec[i] else round(vec[i], 3),  # NaN -> None
+                "contribution": round(float(mine[i]), 3),
+            }
+            for i in order
+            if abs(mine[i]) >= 0.01
+        ]
+
     def info(self) -> dict:
         if self.booster is None:
             return {"kind": "dummy"}
