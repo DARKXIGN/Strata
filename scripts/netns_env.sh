@@ -7,8 +7,10 @@ VETH_NS="${STRATA_VETH_NS:-strata-ns}"
 GW_IP="${STRATA_GW_IP:-10.200.0.1}"
 NS_IP="${STRATA_NS_IP:-10.200.0.2}"
 SUBNET="${STRATA_SUBNET:-10.200.0.0/24}"
-# Resolvers for the namespace only (host uses the 127.0.0.53 stub, unreachable from a netns).
-DNS_SERVERS="${STRATA_DNS_SERVERS:-1.1.1.1 8.8.8.8}"
+# Resolver for the namespace only (host uses the 127.0.0.53 stub, unreachable from a netns).
+# A single resolver on purpose: the training data was collected this way, and a second
+# entry would let dig fall back on timeouts and change the dns_primary_* features.
+DNS_SERVERS="${STRATA_DNS_SERVERS:-1.1.1.1}"
 STATE_DIR="${STRATA_STATE_DIR:-/run/strata}"
 NETNS_ETC="/etc/netns/$NS"
 TAG="strata"

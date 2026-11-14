@@ -5,7 +5,7 @@
 #   1. Creates network namespace "strata".
 #   2. Creates a veth pair strata-host (host side, 10.200.0.1/24) <-> strata-ns (inside
 #      the namespace, 10.200.0.2/24) and a default route in the namespace via 10.200.0.1.
-#   3. Writes /etc/netns/strata/resolv.conf with 1.1.1.1 and 8.8.8.8. Only processes run
+#   3. Writes /etc/netns/strata/resolv.conf with 1.1.1.1. Only processes run
 #      with `ip netns exec strata` see it.
 #   4. Adds exactly three iptables rules (iptables command only, comment "strata"):
 #        nat/POSTROUTING  -s 10.200.0.0/24 -o <main if> -j MASQUERADE     (appended)

@@ -37,7 +37,7 @@ NETNS = os.getenv("STRATA_NETNS", "strata")
 VETH_HOST = os.getenv("STRATA_VETH_HOST", "strata-host")
 GW_IP = os.getenv("STRATA_GW_IP", "10.200.0.1")
 # Must match DNS_SERVERS in scripts/netns_env.sh.
-DNS_SERVERS = os.getenv("STRATA_DNS_SERVERS", "1.1.1.1 8.8.8.8").replace(",", " ").split()
+DNS_SERVERS = os.getenv("STRATA_DNS_SERVERS", "1.1.1.1").replace(",", " ").split()
 DEAD_RESOLVER = "192.0.2.53"
 STATE_FILE = Path(os.getenv("STRATA_STATE_DIR", "/run/strata")) / "fault.json"
 

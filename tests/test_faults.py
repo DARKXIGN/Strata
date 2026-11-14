@@ -68,7 +68,7 @@ class SafetyTests(unittest.TestCase):
     def test_namespace_resolvers(self):
         text = resolv_text(None)
         self.assertIn("nameserver 1.1.1.1", text)
-        self.assertIn("nameserver 8.8.8.8", text)
+        self.assertEqual(text.count("nameserver"), 1)  # matches how training data was collected
         self.assertNotIn("1.1.1.1", resolv_text("dns_failure"))
 
     def test_refuses_non_strata_devices(self):
