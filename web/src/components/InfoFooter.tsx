@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-/** Credits and the full Tossface license text, loaded from the bundled original file. */
+/** Credits and the full icon license text, loaded from the bundled original file. */
 export default function InfoFooter() {
   const [license, setLicense] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -8,7 +8,7 @@ export default function InfoFooter() {
   const toggle = async () => {
     if (!open && license == null) {
       try {
-        const res = await fetch("/tossface/LICENSE");
+        const res = await fetch("/icons/fluent/LICENSE");
         setLicense(res.ok ? await res.text() : "License file not found.");
       } catch {
         setLicense("License file could not be loaded.");
@@ -20,14 +20,13 @@ export default function InfoFooter() {
   return (
     <footer className="info">
       <p className="caption">
-        Icons: <span className="tossface">{"\u{1F4BB}"}</span> Tossface by Toss (Viva Republica),{" "}
-        <a href="https://toss.im/tossface" target="_blank" rel="noreferrer">
-          toss.im/tossface
+        Icons: Fluent Emoji (Flat) by Microsoft,{" "}
+        <a href="https://github.com/microsoft/fluentui-emoji" target="_blank" rel="noreferrer">
+          github.com/microsoft/fluentui-emoji
         </a>
-        , used unmodified. Copyright (c) 2022, 2023 Viva Republica, with Reserved Font Name Tossface. Font:
-        Pretendard.{" "}
+        , MIT License, used unmodified. Font: Pretendard.{" "}
         <button className="link-btn" onClick={toggle} aria-expanded={open}>
-          {open ? "Hide Tossface license" : "Show Tossface license"}
+          {open ? "Hide icon license" : "Show icon license"}
         </button>
       </p>
       {open && <pre className="license">{license ?? "Loading…"}</pre>}

@@ -109,12 +109,6 @@ button {
 }
 
 /* Strata view */
-.tossface {
-  font-family: "Tossface", sans-serif;
-  font-style: normal;
-  line-height: 1;
-}
-
 .strata {
   --rail-x: 30px;
   position: relative;
@@ -167,7 +161,6 @@ button {
   height: 40px;
   display: grid;
   place-items: center;
-  font-size: 22px;
   border-radius: 50%;
   background: var(--card);
   box-shadow: 0 0 0 2px var(--line);

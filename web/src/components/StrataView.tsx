@@ -91,8 +91,8 @@ export default function StrataView({ layers, tick }: Props) {
           const state = !tick || i > depth ? "pending" : i === depth ? "digging" : real;
           return (
             <li key={layer} className={`stratum stratum-${state}`}>
-              <span className="stratum-icon tossface" aria-hidden>
-                {LAYER_ICON[layer]}
+              <span className="stratum-icon" aria-hidden>
+                <img src={LAYER_ICON[layer]} alt="" width={24} height={24} />
               </span>
               <span className="stratum-text">
                 <span className="stratum-name">{LAYER_TEXT[layer] ?? layer}</span>

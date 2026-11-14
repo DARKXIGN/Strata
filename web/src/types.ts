@@ -50,12 +50,12 @@ export interface FaultEvent {
   label: string | null;
 }
 
-/** Tossface glyph per strata layer. */
+/** Fluent Emoji (Flat, MIT) icon per strata layer, bundled in public/icons/fluent. */
 export const LAYER_ICON: Record<string, string> = {
-  device: "\u{1F4BB}", // laptop
-  wifi: "\u{1F4F6}", // antenna bars
-  router: "\u{1F4E1}", // satellite antenna
-  isp: "\u{1F310}", // globe with meridians
-  dns: "\u{1F4D6}", // open book
-  server: "\u{1F5C4}\u{FE0F}", // file cabinet
+  device: "/icons/fluent/laptop_flat.svg",
+  wifi: "/icons/fluent/antenna_bars_flat.svg",
+  router: "/icons/fluent/satellite_antenna_flat.svg",
+  isp: "/icons/fluent/globe_with_meridians_flat.svg",
+  dns: "/icons/fluent/open_book_flat.svg",
+  server: "/icons/fluent/file_cabinet_flat.svg",
 };
