@@ -133,3 +133,67 @@ export function featureValue(key: string, v: number | null): string {
   const digits = Math.abs(v) < 10 ? 1 : 0;
   return `${v.toFixed(digits)} ${unit}`;
 }
+
+// -- diagnosis history and regional aggregation (served by /api/history, /api/regions) --
+
+export interface HistoryRecord {
+  id: string;
+  agent_id: string;
+  ts: number;
+  label: string;
+  probs: Record<string, number>;
+  anomaly_score: number | null;
+  abnormal: boolean;
+}
+
+export interface HistoryResponse {
+  agent_id: string;
+  source: "supabase" | "local";
+  note: string | null;
+  records: HistoryRecord[];
+}
+
+export type AgentStatus = "normal" | "abnormal" | "silent";
+export type Verdict = "regional_outage" | "individual_issue" | "normal" | "no_data";
+
+export interface AgentSummary {
+  id: string;
+  name: string;
+  region: string;
+  status: AgentStatus;
+  main_issue: string | null;
+  records: number;
+  abnormal_records: number;
+  last_ts: number | null;
+  last_label: string | null;
+}
+
+export interface RegionSummary {
+  region: string;
+  verdict: Verdict;
+  agents: AgentSummary[];
+  reporting: number;
+  abnormal_agents: number;
+  abnormal_ratio: number | null;
+  timeline: { start: number; reporting: number; abnormal: number }[];
+}
+
+export interface RegionsResponse {
+  now: number;
+  window_seconds: number;
+  status_seconds: number;
+  source: "supabase" | "local";
+  note: string | null;
+  self_agent: string;
+  regions: RegionSummary[];
+}
+
+export interface StorageStatus {
+  upload_enabled: boolean;
+  reason: string;
+  agent_id: string;
+  region: string;
+  pending: number | null;
+  last_upload_at: number | null;
+  last_error: string | null;
+}

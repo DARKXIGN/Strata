@@ -944,3 +944,226 @@ button {
   color: var(--text);
   text-decoration: underline;
 }
+
+/* Diagnosis history */
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 76px 10px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+}
+
+.history-time,
+.history-conf {
+  font-size: 13px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-conf {
+  text-align: right;
+}
+
+.history-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.history-ok .history-dot {
+  background: var(--ok);
+}
+
+.history-bad .history-dot {
+  background: var(--bad);
+}
+
+.history-bad .history-label {
+  font-weight: 600;
+}
+
+.history-flag {
+  font-size: 13px;
+  color: var(--text-sub);
+  font-weight: 400;
+}
+
+.history-source,
+.region-source {
+  margin: 12px 0 0;
+}
+
+.empty {
+  margin-top: 8px;
+}
+
+/* Just me, or everyone? */
+.region-headline {
+  margin: 4px 0 12px;
+}
+
+.region {
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--line);
+}
+
+.region-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.region-name {
+  font-weight: 700;
+}
+
+.region-ratio {
+  margin: 0 0 0 auto;
+}
+
+.verdict {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+}
+
+.verdict-regional_outage {
+  background: var(--bad);
+  color: var(--on-status);
+}
+
+.verdict-individual_issue {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+.verdict-normal {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.verdict-no_data {
+  color: var(--text-sub);
+  background: var(--bg);
+}
+
+.timeline {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  height: 28px;
+  margin-top: 12px;
+}
+
+.timeline-bar {
+  position: relative;
+  border-radius: 4px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.timeline-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bad);
+  border-radius: 4px 4px 0 0;
+}
+
+.timeline-caption {
+  margin: 4px 0 8px;
+}
+
+.agent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agent-row:hover,
+.agent-selected {
+  background: var(--accent-soft);
+}
+
+.agent-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.agent-normal .agent-dot {
+  background: var(--ok);
+}
+
+.agent-abnormal .agent-dot {
+  background: var(--bad);
+}
+
+.agent-abnormal .agent-issue {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.agent-self {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.agent-issue {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+:root[data-theme="contrast"] .verdict-normal {
+  background: transparent;
+  border-color: var(--ok);
+}
+
+:root[data-theme="contrast"] .verdict-no_data,
+:root[data-theme="contrast"] .timeline-bar {
+  background: #262626;
+}

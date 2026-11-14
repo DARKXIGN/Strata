@@ -8,6 +8,8 @@ import FaultPanel from "./components/FaultPanel";
 import InfoFooter from "./components/InfoFooter";
 import SettingsDialog from "./components/SettingsDialog";
 import WhyCard from "./components/WhyCard";
+import HistoryCard from "./components/HistoryCard";
+import RegionCard from "./components/RegionCard";
 import { useTheme } from "./theme";
 
 export default function App() {
@@ -15,6 +17,7 @@ export default function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useTheme();
+  const [historyAgent, setHistoryAgent] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/status")
@@ -51,6 +54,8 @@ export default function App() {
         <LiveChart history={history} events={events} theme={theme} />
         <FaultPanel injectable={status?.injectable ?? []} active={latest?.fault.active ?? null} />
         <WhyCard tick={latest} />
+        <HistoryCard agentId={historyAgent} onAgentChange={setHistoryAgent} />
+        <RegionCard selected={historyAgent} onSelect={setHistoryAgent} />
       </main>
 
       <InfoFooter />
