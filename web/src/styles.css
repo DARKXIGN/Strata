@@ -17,16 +17,17 @@
   --warn-soft: #fff4e5;
 }
 
-/* High-contrast dark version: black background, yellow text. */
+/* High-contrast dark version. */
 :root[data-theme="contrast"] {
-  /* Yellow is for text and things you can press; structure is neutral gray. */
+  /* High-contrast dark: black background, white text, one bright blue accent for
+     pressable and highlighted things; structure is neutral gray. */
   --bg: #000000;
   --card: #0b0b0b;
-  --text: #ffe600;
-  --text-sub: #e9dd7a;
+  --text: #ffffff;
+  --text-sub: #c4cad1;
   --line: #3d3d3d;
-  --accent: #ffe600;
-  --accent-soft: #1c1c1c;
+  --accent: #6aa8ff;
+  --accent-soft: #0e1a2e;
   --ok: #4ade80;
   --ok-soft: transparent;
   --bad: #ff6b6b;
@@ -35,7 +36,7 @@
   --on-status: #000000;
   --card-border: #2e2e2e;
   --warn-soft: #1c1c1c;
-  --control-border: #ffe600;
+  --control-border: #6aa8ff;
 }
 
 * {
