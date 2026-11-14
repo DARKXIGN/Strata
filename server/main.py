@@ -5,7 +5,10 @@ Two modes, chosen at start-up (config.load_settings):
   * real - SIM_MODE=0 on Linux, as root, with the strata namespace up
            (scripts/netns_up.sh): probes run inside the namespace and faults are
            injected on its veth. Falls back to sim if anything is missing.
-Faults are reset on start-up, on shutdown, at exit, and on SIGHUP.
+Faults are reset on start-up, on shutdown, at exit, and on SIGHUP (where it exists).
+
+If web/dist exists (cd web && npm run build), the dashboard is served at / too, so one
+port is enough - this is how the offline laptop demo runs (demo_offline.cmd).
 """
 
 from __future__ import annotations
@@ -18,10 +21,11 @@ import os
 import signal
 import time
 from contextlib import asynccontextmanager
-
 from dataclasses import replace
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from collector import sim as sim_collector
@@ -163,8 +167,9 @@ async def run_loop() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _safe_reset()  # clean slate in case an earlier run was killed
-    with contextlib.suppress(ValueError):  # not in the main thread under some runners
-        signal.signal(signal.SIGHUP, _on_hangup)
+    if hasattr(signal, "SIGHUP"):  # POSIX only; Windows has no SIGHUP
+        with contextlib.suppress(ValueError):  # not in the main thread under some runners
+            signal.signal(signal.SIGHUP, _on_hangup)
     if collector is not None:
         await asyncio.to_thread(collector.prepare)  # before any fault, so DNS faults can't break it
         log.info("collector ready: gateway=%s throughput_ip=%s", collector.gateway, collector.cfg.throughput_ip)
@@ -267,3 +272,11 @@ async def websocket(ws: WebSocket) -> None:
         pass
     finally:
         hub.clients.discard(ws)
+
+
+# Serve the built dashboard from the same port when it exists. Mounted last so /api and
+# /ws routes above take precedence. Without a build, the dev server (npm run dev) is used.
+WEB_DIST = Path(__file__).resolve().parents[1] / "web" / "dist"
+if (WEB_DIST / "index.html").exists():
+    app.mount("/", StaticFiles(directory=WEB_DIST, html=True), name="web")
+    log.info("serving dashboard from %s", WEB_DIST)
