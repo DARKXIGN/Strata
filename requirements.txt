@@ -1,3 +1,8 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 python-dotenv>=1.0
+# model inference (server) and training (ml/train.py)
+lightgbm>=4.0
+numpy>=1.24
+scikit-learn>=1.1
+matplotlib>=3.7

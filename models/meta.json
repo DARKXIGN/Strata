@@ -1,0 +1,136 @@
+{
+  "trained_at": "2026-11-14T21:28:37",
+  "data": [
+    "data/raw/main.csv"
+  ],
+  "rows": 1200,
+  "sessions": 60,
+  "features": [
+    "gw_rtt_ms",
+    "gw_jitter_ms",
+    "gw_loss_pct",
+    "ext_rtt_ms",
+    "ext_jitter_ms",
+    "ext_loss_pct",
+    "dns_primary_ms",
+    "dns_primary_ok",
+    "dns_alt_ms",
+    "dns_alt_ok",
+    "trace_hops",
+    "trace_first_hop_ms",
+    "trace_max_hop_ms",
+    "trace_jump_hop",
+    "throughput_mbps",
+    "ext_minus_gw_ms",
+    "ext_loss_minus_gw_loss",
+    "dns_max_ms",
+    "dns_over_rtt_ms",
+    "dns_fail_count",
+    "dns_primary_only_fail"
+  ],
+  "labels": [
+    "normal",
+    "high_latency",
+    "packet_loss",
+    "bandwidth_limit",
+    "dns_slow",
+    "dns_failure"
+  ],
+  "params": {
+    "objective": "multiclass",
+    "n_estimators": 200,
+    "learning_rate": 0.05,
+    "num_leaves": 15,
+    "min_child_samples": 10,
+    "subsample": 0.9,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.9,
+    "random_state": 0,
+    "verbose": -1
+  },
+  "cv": {
+    "folds": 5,
+    "accuracy": 0.9667,
+    "macro_f1": 0.9665,
+    "fold_accuracy": [
+      0.9542,
+      0.95,
+      0.9917,
+      0.9792,
+      0.9583
+    ],
+    "confusion_matrix": [
+      [
+        190,
+        0,
+        10,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        199,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        22,
+        0,
+        173,
+        0,
+        0,
+        5
+      ],
+      [
+        0,
+        0,
+        0,
+        200,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        200,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        0,
+        0,
+        198
+      ]
+    ]
+  },
+  "importance_gain": {
+    "gw_rtt_ms": 410.51,
+    "gw_jitter_ms": 154.51,
+    "gw_loss_pct": 0.0,
+    "ext_rtt_ms": 2658.31,
+    "ext_jitter_ms": 470.33,
+    "ext_loss_pct": 4013.39,
+    "dns_primary_ms": 2830.51,
+    "dns_primary_ok": 5.13,
+    "dns_alt_ms": 177.63,
+    "dns_alt_ok": 41.45,
+    "trace_hops": 65.44,
+    "trace_first_hop_ms": 314.51,
+    "trace_max_hop_ms": 817.04,
+    "trace_jump_hop": 2.9,
+    "throughput_mbps": 9787.18,
+    "ext_minus_gw_ms": 5326.11,
+    "ext_loss_minus_gw_loss": 241.95,
+    "dns_max_ms": 173.72,
+    "dns_over_rtt_ms": 6635.75,
+    "dns_fail_count": 121.08,
+    "dns_primary_only_fail": 6011.06
+  }
+}
