@@ -32,6 +32,9 @@ yarn-error.log*
 
 # Collected data and captures
 data/raw/
+# Local diagnosis history / upload queue (SQLite + WAL files)
+data/*.sqlite
+data/*.sqlite-*
 *.pcap
 *.pcapng
 

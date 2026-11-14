@@ -32,6 +32,8 @@ from faults import INJECTABLE, LABEL_LAYER, LABELS, LAYERS
 from faults.sim import SimFaultController
 from ml.anomaly import AnomalyDetector
 from ml.model import MODEL_DIR, Classifier
+from storage import config as storage_config
+from storage.service import StorageService
 
 log = logging.getLogger("strata")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -60,6 +62,15 @@ else:
     faults = SimFaultController()
 
 log.info("mode=%s (%s), classifier=%s, explain=%s", mode, mode_reason, classifier.kind, explainer.settings.mode)
+
+# Storage is an add-on: if it can't start, the server runs exactly as before.
+try:
+    storage: StorageService | None = StorageService(storage_config.load())
+    log.info("storage: agent=%s region=%s upload=%s", storage.cfg.agent_id, storage.cfg.region,
+             "on" if storage.uploading else f"off ({storage.cfg.reason})")
+except Exception as exc:
+    storage = None
+    log.warning("storage unavailable (%s); realtime diagnosis unaffected", type(exc).__name__)
 
 
 def _safe_reset() -> None:
@@ -153,9 +164,14 @@ async def run_loop() -> None:
         started = time.time()
         try:
             row = await asyncio.to_thread(measure)
-            await hub.broadcast(build_tick(row, time.time()))
+            tick = build_tick(row, time.time())
+            await hub.broadcast(tick)
         except Exception:
             log.exception("tick failed")
+            tick = None
+        if tick is not None and storage is not None:
+            # After the broadcast, off the event loop; StorageService.offer never raises.
+            await asyncio.to_thread(storage.offer, tick)
         # Real rounds already take ~2 s; sim rounds are paced to one per tick.
         await asyncio.sleep(max(0.1, settings.tick_seconds - (time.time() - started)))
 
@@ -169,12 +185,17 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(collector.prepare)  # before any fault, so DNS faults can't break it
         log.info("collector ready: gateway=%s throughput_ip=%s", collector.gateway, collector.cfg.throughput_ip)
     task = asyncio.create_task(run_loop())
+    # The uploader runs in this process, i.e. in the host network namespace: only the
+    # probes enter a fault namespace, so records keep flowing while a fault is injected.
+    uploader = asyncio.create_task(storage.run_uploader()) if storage is not None else None
     try:
         yield
     finally:
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
+        for t in (task, uploader):
+            if t is not None:
+                t.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await t
         _safe_reset()
 
 
@@ -194,7 +215,36 @@ def status() -> dict:
         "layers": LAYERS,
         "injectable": INJECTABLE,
         "active_fault": faults.state.name,
+        "agent": None if storage is None else {"id": storage.cfg.agent_id, "name": storage.cfg.agent_name,
+                                               "region": storage.cfg.region},
     }
+
+
+# -- diagnosis history and regional aggregation (storage add-on) -------------------------
+
+def _storage() -> StorageService:
+    if storage is None:
+        raise HTTPException(status_code=503, detail="storage unavailable on this server")
+    return storage
+
+
+@app.get("/api/storage/status")
+def storage_status() -> dict:
+    """Upload state for this agent. Never includes the key (only a short fingerprint)."""
+    return _storage().status()
+
+
+@app.get("/api/history")
+def history(agent_id: str | None = None, limit: int = 30) -> dict:
+    """Recent diagnoses of one agent (default: this server's agent), newest first."""
+    return _storage().history(agent_id, limit)
+
+
+@app.get("/api/regions")
+def regions(minutes: float = 10) -> dict:
+    """Per region: abnormal ratio over the window, each agent's status, and the verdict
+    regional_outage / individual_issue / normal / no_data."""
+    return _storage().regions(minutes)
 
 
 @app.post("/api/faults/reset")
