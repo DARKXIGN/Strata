@@ -9,7 +9,12 @@
 #   reset                deletes the strata-host qdisc and restores the namespace resolv.conf.
 # Never touches the main interface (enp0s6), iptables, or the host's /etc/resolv.conf.
 #
+# Add --agent a|b|c (before the command) to target strata-a/b/c instead of "strata";
+# each agent has its own veth (strata-<x>-host) and resolv.conf.
+#
 # Examples:
+#   sudo scripts/fault.sh --agent b inject packet_loss loss_pct=10
+#   sudo scripts/fault.sh --agent b reset
 #   sudo scripts/fault.sh inject high_latency delay_ms=200 jitter_ms=20
 #   sudo scripts/fault.sh inject packet_loss loss_pct=10
 #   sudo scripts/fault.sh inject bandwidth_limit rate_kbit=1000

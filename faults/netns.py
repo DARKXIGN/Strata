@@ -1,4 +1,4 @@
-"""Real fault injection, confined to the strata network namespace.
+"""Real fault injection, confined to one strata network namespace (default or agent a/b/c).
 
 WHAT THIS CHANGES (needs root, and scripts/netns_up.sh must have run first):
   * Link faults (high_latency, packet_loss, bandwidth_limit) and dns_slow:
@@ -13,10 +13,14 @@ It never touches the host's main interface, routes, or /etc/resolv.conf. Before 
 change it checks that the target device is a veth named strata-* and is not the
 default-route interface; otherwise it refuses. Uses tc only (no iptables/nft).
 
+Each agent namespace (strata-a/b/c, see faults/profiles.py) has its own veth, gateway and
+state file, so faults are injected per agent and never leak into another namespace.
+
 CLI (via scripts/fault.sh):
     sudo scripts/fault.sh inject high_latency delay_ms=200
-    sudo scripts/fault.sh reset
-    sudo scripts/fault.sh status
+    sudo scripts/fault.sh --agent b inject packet_loss loss_pct=10
+    sudo scripts/fault.sh --agent b reset
+    scripts/fault.sh status
 """
 
 from __future__ import annotations
@@ -31,15 +35,21 @@ import time
 from pathlib import Path
 
 from faults import INJECTABLE
+from faults.profiles import AGENTS, Profile, from_agent, profile
 from faults.sim import FaultState
 
-NETNS = os.getenv("STRATA_NETNS", "strata")
-VETH_HOST = os.getenv("STRATA_VETH_HOST", "strata-host")
-GW_IP = os.getenv("STRATA_GW_IP", "10.200.0.1")
+_DEFAULT = profile("strata")
+NETNS = _DEFAULT.netns
+VETH_HOST = _DEFAULT.veth_host
+GW_IP = _DEFAULT.gw_ip
 # Must match DNS_SERVERS in scripts/netns_env.sh.
 DNS_SERVERS = os.getenv("STRATA_DNS_SERVERS", "1.1.1.1").replace(",", " ").split()
 DEAD_RESOLVER = "192.0.2.53"
-STATE_FILE = Path(os.getenv("STRATA_STATE_DIR", "/run/strata")) / "fault.json"
+STATE_ROOT = Path(os.getenv("STRATA_STATE_DIR", "/run/strata"))
+
+
+def state_file(netns: str) -> Path:
+    return STATE_ROOT / netns / "fault.json"  # same per-namespace dir as scripts/netns_env.sh
 
 LINK_FAULTS = {"high_latency", "packet_loss", "bandwidth_limit"}
 
@@ -120,9 +130,11 @@ def default_route_dev() -> str | None:
 class NetnsFaultController:
     mode = "netns"
 
-    def __init__(self, netns: str = NETNS, dev: str = VETH_HOST) -> None:
-        self.netns = netns
-        self.dev = dev
+    def __init__(self, netns: str | None = None, dev: str | None = None) -> None:
+        self.profile: Profile = profile(netns)
+        self.netns = self.profile.netns
+        self.dev = dev or self.profile.veth_host
+        self.gw_ip = self.profile.gw_ip
         self.state = FaultState()
         self._check_device()
 
@@ -146,8 +158,9 @@ class NetnsFaultController:
             raise RuntimeError(f"{' '.join(cmd)} failed: {proc.stderr.strip()}")
 
     def _write_state(self) -> None:
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps({"name": self.state.name, "params": self.state.params,
+        path = state_file(self.netns)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"name": self.state.name, "params": self.state.params,
                                           "injected_at": self.state.injected_at}))
 
     def inject(self, name: str, params: dict[str, float] | None = None) -> FaultState:
@@ -156,7 +169,7 @@ class NetnsFaultController:
         self.reset()
         params = params if params is not None else sample_params(name)
         try:
-            for cmd in inject_commands(name, params, self.dev):
+            for cmd in inject_commands(name, params, self.dev, self.gw_ip):
                 self._run(cmd)
             if name == "dns_failure":
                 resolv_path(self.netns).write_text(resolv_text(name))
@@ -185,7 +198,8 @@ def _parse_kv(items: list[str]) -> dict[str, float]:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Inject or reset faults inside the strata namespace.")
+    ap = argparse.ArgumentParser(description="Inject or reset faults inside a strata namespace.")
+    ap.add_argument("--agent", choices=sorted(AGENTS), help="agent namespace strata-a/b/c (default: strata)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     inj = sub.add_parser("inject")
     inj.add_argument("name", choices=INJECTABLE)
@@ -194,15 +208,19 @@ def main() -> None:
     sub.add_parser("status")
     args = ap.parse_args()
 
+    prof = from_agent(args.agent)
     if args.cmd == "status":
-        print(STATE_FILE.read_text() if STATE_FILE.exists() else '{"name": null}')
-        subprocess.run(["tc", "qdisc", "show", "dev", VETH_HOST])
-        print(resolv_path().read_text() if resolv_path().exists() else "(no namespace resolv.conf)")
+        sf = state_file(prof.netns)
+        print(f"namespace {prof.netns} (veth {prof.veth_host})")
+        print(sf.read_text() if sf.exists() else '{"name": null}')
+        subprocess.run(["tc", "qdisc", "show", "dev", prof.veth_host])
+        rp = resolv_path(prof.netns)
+        print(rp.read_text() if rp.exists() else "(no namespace resolv.conf)")
         return
 
     if os.geteuid() != 0:
         sys.exit("run with sudo")
-    ctl = NetnsFaultController()
+    ctl = NetnsFaultController(netns=prof.netns)
     if args.cmd == "reset":
         ctl.reset()
         print("reset: qdisc removed, namespace resolv.conf restored")

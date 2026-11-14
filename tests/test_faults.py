@@ -93,3 +93,44 @@ class StaleEnvTests(unittest.TestCase):
         new = {"STRATA_VETH_HOST": "strata-host", "STRATA_DNS_SERVERS": "1.1.1.1"}
         with mock.patch.dict(os.environ, new, clear=True):
             self.assertEqual(stale_env_problems(), [])
+
+
+class AgentProfileTests(unittest.TestCase):
+    def test_agent_profiles_are_disjoint(self):
+        from faults.profiles import profile
+
+        profs = [profile(n) for n in ("strata", "strata-a", "strata-b", "strata-c")]
+        for field in ("netns", "veth_host", "veth_ns", "gw_ip", "subnet", "tag"):
+            values = [getattr(p, field) for p in profs]
+            self.assertEqual(len(set(values)), 4, field)
+        a = profile("strata-a")
+        self.assertEqual((a.veth_host, a.gw_ip, a.subnet, a.tag), ("strata-a-host", "10.200.1.1", "10.200.1.0/24", "strata-a"))
+        self.assertTrue(all(len(p.veth_host) <= 15 and len(p.veth_ns) <= 15 for p in profs))  # IFNAMSIZ
+
+    def test_env_overrides_apply_to_default_only(self):
+        import os
+        from unittest import mock
+
+        from faults.profiles import profile
+
+        with mock.patch.dict(os.environ, {"STRATA_VETH_HOST": "strata-host", "STRATA_GW_IP": "10.200.0.1"}):
+            self.assertEqual(profile("strata-b").veth_host, "strata-b-host")
+            self.assertEqual(profile("strata-b").gw_ip, "10.200.2.1")
+
+    def test_unknown_namespace_rejected(self):
+        from faults.profiles import from_agent, profile
+
+        for bad in ("strata-d", "docker0", "enp0s6"):
+            with self.assertRaises(ValueError):
+                profile(bad)
+        with self.assertRaises(ValueError):
+            from_agent("d")
+        self.assertEqual(from_agent(None).netns, "strata")
+
+    def test_agent_fault_commands_use_agent_gateway_and_veth(self):
+        from faults.profiles import profile
+
+        p = profile("strata-c")
+        joined = [" ".join(c) for c in inject_commands("packet_loss", {"loss_pct": 10}, p.veth_host, p.gw_ip)]
+        self.assertTrue(all(" dev strata-c-host " in c for c in joined))
+        self.assertTrue(any("match ip src 10.200.3.1/32" in c for c in joined))

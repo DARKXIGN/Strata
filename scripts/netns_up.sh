@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Create the isolated test network for Strata. Run with sudo on the OCI host.
 #
-# WHAT THIS CHANGES (all undone by scripts/netns_down.sh):
+#   sudo scripts/netns_up.sh          # default single namespace "strata" (10.200.0.0/24)
+#   sudo scripts/netns_up.sh a        # agent namespace "strata-a" (10.200.1.0/24)
+#   sudo scripts/netns_up.sh a b c    # three agents, one after another
+#
+# WHAT THIS CHANGES, per namespace (all undone by scripts/netns_down.sh with the same argument;
+# shown for the default profile, agents use strata-<x>-host/-ns, 10.200.<1|2|3>.0/24, tag strata-<x>):
 #   1. Creates network namespace "strata".
 #   2. Creates a veth pair strata-host (host side, 10.200.0.1/24) <-> strata-ns (inside
 #      the namespace, 10.200.0.2/24) and a default route in the namespace via 10.200.0.1.
@@ -11,6 +16,7 @@
 #        nat/POSTROUTING  -s 10.200.0.0/24 -o <main if> -j MASQUERADE     (appended)
 #        DOCKER-USER      -i strata-host -o <main if> -j ACCEPT           (inserted at top)
 #        DOCKER-USER      -i <main if> -o strata-host RELATED,ESTABLISHED (inserted at top)
+#   5. Writes state to /run/strata/strata/ (tmpfs; gone after reboot).
 #
 # WHAT THIS DOES NOT CHANGE:
 #   * the main interface (enp0s6): no address, route, qdisc or MTU change
@@ -21,19 +27,28 @@
 #     /etc/iptables/rules.v4, so a reboot drops these rules. Do not run
 #     `netfilter-persistent save` while the namespace is up.
 set -euo pipefail
-source "$(dirname "$0")/netns_env.sh"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+if [[ $# -gt 1 ]]; then  # several agents: set each up in turn, stop at the first failure
+  for agent in "$@"; do "$HERE/netns_up.sh" "$agent" || exit 1; done
+  exit 0
+fi
+
+source "$HERE/netns_env.sh"
+AGENT="${1:-}"
+load_profile "$AGENT"
 
 [[ $EUID -eq 0 ]] || { echo "run with sudo" >&2; exit 1; }
 for tool in ip iptables sysctl; do
   command -v "$tool" >/dev/null || { echo "missing tool: $tool" >&2; exit 1; }
 done
 
-if ip netns list | grep -qw "$NS"; then
-  echo "namespace $NS already exists. Run sudo scripts/netns_down.sh first." >&2
+if netns_exists "$NS"; then
+  echo "namespace $NS already exists. Run sudo scripts/netns_down.sh $AGENT first." >&2
   exit 1
 fi
 if ip link show "$VETH_HOST" >/dev/null 2>&1; then
-  echo "$VETH_HOST already exists. Run sudo scripts/netns_down.sh first." >&2
+  echo "$VETH_HOST already exists. Run sudo scripts/netns_down.sh $AGENT first." >&2
   exit 1
 fi
 if ip -4 route show | grep -q "${SUBNET%/*}"; then
@@ -52,7 +67,7 @@ set_rule_specs "$MAIN_IF"
 echo "main interface (read only): $MAIN_IF   forward rules go to: $FWD_CHAIN"
 
 # Undo partial setup if any step below fails.
-trap 'echo "setup failed; rolling back" >&2; "$(dirname "$0")/netns_down.sh"' ERR
+trap 'echo "setup failed; rolling back" >&2; "$HERE/netns_down.sh" $AGENT' ERR
 
 mkdir -p "$STATE_DIR"
 echo "$MAIN_IF" > "$STATE_DIR/main_if"

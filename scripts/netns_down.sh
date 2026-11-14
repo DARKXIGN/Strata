@@ -2,16 +2,36 @@
 # Remove everything scripts/netns_up.sh created, then verify nothing is left.
 # Safe to run any number of times. Run with sudo.
 #
-# WHAT THIS CHANGES:
+#   sudo scripts/netns_down.sh          # default namespace "strata"
+#   sudo scripts/netns_down.sh b        # agent namespace "strata-b" only
+#   sudo scripts/netns_down.sh all      # default + strata-a, strata-b, strata-c
+#
+# WHAT THIS CHANGES, per namespace (default profile shown; agents use their own names/tag):
 #   1. Deletes the three iptables rules netns_up.sh added, by exact spec (iptables -D),
-#      only while `iptables -C` still finds them. Docker's chains and rules are untouched.
+#      only while `iptables -C` still finds them. Docker's chains and rules are untouched,
+#      and so are the rules of any other strata namespace (different spec and tag).
 #   2. Deletes the "strata" namespace and the strata-host/strata-ns veth pair (with any
 #      fault qdisc on strata-host).
-#   3. Deletes /etc/netns/strata/ and /run/strata/.
+#   3. Deletes /etc/netns/strata/ and /run/strata/strata/ (and /run/strata if then empty).
 # It does not change net.ipv4.ip_forward, the main interface, the host's DNS, or saved
 # firewall rules. Exit code is 1 if anything is still left afterwards.
 set -uo pipefail
-source "$(dirname "$0")/netns_env.sh"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+if [[ "${1:-}" == "all" ]]; then
+  set -- "" a b c
+fi
+if [[ $# -gt 1 ]]; then  # several namespaces: tear each down, report overall result
+  rc=0
+  for agent in "$@"; do
+    echo "== ${agent:-default}"
+    "$HERE/netns_down.sh" "$agent" || rc=1
+  done
+  exit $rc
+fi
+
+source "$HERE/netns_env.sh"
+load_profile "${1:-}" || exit 2
 
 [[ $EUID -eq 0 ]] || { echo "run with sudo" >&2; exit 1; }
 
@@ -43,9 +63,10 @@ ip link del "$VETH_HOST" 2>/dev/null && echo "deleted $VETH_HOST"
 # 3. files
 [[ -d "$NETNS_ETC" ]] && rm -rf "$NETNS_ETC" && echo "deleted $NETNS_ETC"
 [[ -d "$STATE_DIR" ]] && rm -rf "$STATE_DIR" && echo "deleted $STATE_DIR"
+rmdir "$STATE_ROOT" 2>/dev/null  # only if no other namespace still has state there
 
 # Verify
-echo "verification:"
+echo "verification ($NS):"
 left=0
 check() {  # check <description> <command that succeeds if the item still exists>
   local desc="$1"; shift
@@ -56,8 +77,8 @@ for chain in "${CHAINS[@]}"; do
   check "$chain accept $VETH_HOST -> $MAIN_IF" iptables -C "$chain" "${FWD_OUT_SPEC[@]}"
   check "$chain accept $MAIN_IF -> $VETH_HOST (replies)" iptables -C "$chain" "${FWD_IN_SPEC[@]}"
 done
-check "any rule tagged '$TAG'" bash -c "iptables-save | grep -q -- '--comment $TAG'"
-check "namespace $NS" bash -c "ip netns list | grep -qw '$NS'"
+check "any rule tagged '$TAG'" tag_rules_left "$TAG"
+check "namespace $NS" netns_exists "$NS"
 check "veth $VETH_HOST" ip link show "$VETH_HOST"
 check "veth $VETH_NS" ip link show "$VETH_NS"
 check "$NETNS_ETC" test -e "$NETNS_ETC"
