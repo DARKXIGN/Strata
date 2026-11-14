@@ -9,6 +9,7 @@ export interface Tick {
     probs: Record<string, number>;
     layer: string | null;
     layers: Record<string, LayerStatus>;
+    model?: string;
   };
   explanation: { mode: string; summary: string; actions: string[] };
   fault: { active: string | null; injected_at: number | null; detected_at: number | null };

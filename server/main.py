@@ -1,10 +1,21 @@
-"""FastAPI server: runs the measure -> classify -> explain loop and streams it over WebSocket."""
+"""FastAPI server: runs the measure -> classify -> explain loop and streams it over WebSocket.
+
+Two modes, chosen at start-up (config.load_settings):
+  * sim  - fake measurements and in-memory faults. Default; works anywhere.
+  * real - SIM_MODE=0 on Linux, as root, with the strata namespace up
+           (scripts/netns_up.sh): probes run inside the namespace and faults are
+           injected on its veth. Falls back to sim if anything is missing.
+Faults are reset on start-up, on shutdown, at exit, and on SIGHUP.
+"""
 
 from __future__ import annotations
 
 import asyncio
+import atexit
 import contextlib
 import logging
+import os
+import signal
 import time
 from contextlib import asynccontextmanager
 
@@ -15,11 +26,48 @@ from config import load_settings
 from explain import explain
 from faults import INJECTABLE, LABEL_LAYER, LABELS, LAYERS
 from faults.sim import SimFaultController
-from ml import dummy
+from ml.model import Classifier
 
 log = logging.getLogger("strata")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+
 settings = load_settings()
-faults = SimFaultController()
+classifier = Classifier.load()
+mode, mode_reason = ("sim", settings.sim_reason) if settings.sim_mode else ("real", "real")
+collector = None
+
+if mode == "real":
+    try:
+        from collector.linux import CollectorConfig, LinuxCollector, missing_tools
+        from faults.netns import NetnsFaultController
+
+        if missing := missing_tools():
+            raise RuntimeError(f"missing tools: {', '.join(missing)}")
+        faults = NetnsFaultController(netns=settings.netns)
+        collector = LinuxCollector(CollectorConfig.from_env(settings.netns))
+    except Exception as exc:
+        log.error("real mode unavailable (%s); falling back to sim", exc)
+        mode, mode_reason = "sim", f"fallback: {exc}"
+        faults = SimFaultController()
+else:
+    faults = SimFaultController()
+
+log.info("mode=%s (%s), classifier=%s", mode, mode_reason, classifier.kind)
+
+
+def _safe_reset() -> None:
+    with contextlib.suppress(Exception):
+        faults.reset()
+
+
+atexit.register(_safe_reset)
+
+
+def _on_hangup(signum, _frame) -> None:
+    # An ssh drop sends SIGHUP; reset the network before dying with the default action.
+    _safe_reset()
+    signal.signal(signum, signal.SIG_DFL)
+    os.kill(os.getpid(), signum)
 
 
 class Hub:
@@ -43,8 +91,6 @@ class Hub:
 
 
 hub = Hub()
-
-
 UNMEASURED_LAYERS = {"wifi"}  # shown on the strata view, never diagnosed
 
 
@@ -56,27 +102,37 @@ def layer_status(label: str) -> dict[str, str]:
     }
 
 
-def tick() -> dict:
+def measure() -> dict:
+    """One feature row. Blocking (real probes take ~2 s); call it in a thread."""
+    if collector is not None:
+        return collector.measure()
     state = faults.state
-    row = sim_collector.measure(state.name, state.severity)
-    label, probs = dummy.predict(row)
+    return sim_collector.measure(state.name, state.severity)
+
+
+def build_tick(row: dict, measured_at: float) -> dict:
+    state = faults.state
+    label, probs = classifier.predict(row)
 
     if state.name and hub.detected_at is None and label == state.name:
         hub.detected_at = time.time()
 
     return {
         "type": "tick",
-        "ts": time.time(),
+        "ts": measured_at,
+        "mode": mode,
         "features": row,
         "diagnosis": {
             "label": label,
             "probs": probs,
             "layer": LABEL_LAYER.get(label),
             "layers": layer_status(label),
+            "model": classifier.kind,
         },
         "explanation": explain(label, probs, row),
         "fault": {
             "active": state.name,
+            "params": state.params,
             "injected_at": state.injected_at,
             "detected_at": hub.detected_at,
         },
@@ -85,15 +141,24 @@ def tick() -> dict:
 
 async def run_loop() -> None:
     while True:
+        started = time.time()
         try:
-            await hub.broadcast(tick())
+            row = await asyncio.to_thread(measure)
+            await hub.broadcast(build_tick(row, time.time()))
         except Exception:
             log.exception("tick failed")
-        await asyncio.sleep(settings.tick_seconds)
+        # Real rounds already take ~2 s; sim rounds are paced to one per tick.
+        await asyncio.sleep(max(0.1, settings.tick_seconds - (time.time() - started)))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _safe_reset()  # clean slate in case an earlier run was killed
+    with contextlib.suppress(ValueError):  # not in the main thread under some runners
+        signal.signal(signal.SIGHUP, _on_hangup)
+    if collector is not None:
+        await asyncio.to_thread(collector.prepare)  # before any fault, so DNS faults can't break it
+        log.info("collector ready: gateway=%s throughput_ip=%s", collector.gateway, collector.cfg.throughput_ip)
     task = asyncio.create_task(run_loop())
     try:
         yield
@@ -101,7 +166,7 @@ async def lifespan(app: FastAPI):
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
-        faults.reset()
+        _safe_reset()
 
 
 app = FastAPI(title="Strata", lifespan=lifespan)
@@ -110,10 +175,11 @@ app = FastAPI(title="Strata", lifespan=lifespan)
 @app.get("/api/status")
 def status() -> dict:
     return {
-        "sim_mode": settings.sim_mode,
-        "sim_reason": settings.sim_reason,
+        "sim_mode": mode == "sim",
+        "sim_reason": mode_reason,
         "fault_mode": faults.mode,
         "explain_mode": settings.explain_mode,
+        "model": classifier.info(),
         "labels": LABELS,
         "layers": LAYERS,
         "injectable": INJECTABLE,
@@ -132,9 +198,14 @@ def reset_fault() -> dict:
 def inject_fault(name: str) -> dict:
     if name not in INJECTABLE:
         raise HTTPException(status_code=404, detail=f"unknown fault: {name}")
-    state = faults.inject(name)
+    try:
+        state = faults.inject(name)
+    except Exception as exc:
+        log.exception("inject failed")
+        _safe_reset()
+        raise HTTPException(status_code=500, detail=f"inject failed: {exc}") from exc
     hub.detected_at = None
-    return {"active": state.name, "injected_at": state.injected_at}
+    return {"active": state.name, "params": state.params, "injected_at": state.injected_at}
 
 
 @app.websocket("/ws")

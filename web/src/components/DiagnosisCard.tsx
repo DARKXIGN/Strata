@@ -37,7 +37,10 @@ export default function DiagnosisCard({ tick }: { tick: Tick | null }) {
           </div>
         ))}
       </div>
-      <p className="caption">Explanation: {tick.explanation.mode}</p>
+      <p className="caption">
+        Model: {tick.diagnosis.model === "lightgbm" ? "LightGBM" : "rule-based fallback"} · Explanation:{" "}
+        {tick.explanation.mode}
+      </p>
     </section>
   );
 }
