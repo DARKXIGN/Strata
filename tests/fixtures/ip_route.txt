@@ -1,0 +1,2 @@
+default via 10.200.0.1 dev st-ns
+10.200.0.0/24 dev st-ns proto kernel scope link src 10.200.0.2
