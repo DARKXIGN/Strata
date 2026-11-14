@@ -1,0 +1,40 @@
+import { useEffect, useState } from "react";
+import { useLiveData } from "./useLiveData";
+import type { Status } from "./types";
+import StrataView from "./components/StrataView";
+import DiagnosisCard from "./components/DiagnosisCard";
+import LiveChart from "./components/LiveChart";
+import FaultPanel from "./components/FaultPanel";
+
+export default function App() {
+  const { latest, history, connected } = useLiveData();
+  const [status, setStatus] = useState<Status | null>(null);
+
+  useEffect(() => {
+    fetch("/api/status")
+      .then((r) => r.json())
+      .then(setStatus)
+      .catch(() => setStatus(null));
+  }, [connected]);
+
+  return (
+    <div className="page">
+      <header className="header">
+        <h1 className="title">Strata</h1>
+        <div className="badges">
+          {status?.sim_mode && <span className="badge">Simulation</span>}
+          <span className={`badge ${connected ? "" : "badge-muted"}`}>
+            {connected ? "Live" : "Connecting…"}
+          </span>
+        </div>
+      </header>
+
+      <main className="grid">
+        <StrataView layers={status?.layers ?? []} tick={latest} />
+        <DiagnosisCard tick={latest} />
+        <LiveChart history={history} />
+        <FaultPanel injectable={status?.injectable ?? []} active={latest?.fault.active ?? null} />
+      </main>
+    </div>
+  );
+}

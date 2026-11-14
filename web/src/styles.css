@@ -1,0 +1,298 @@
+:root {
+  --bg: #f2f4f6;
+  --card: #ffffff;
+  --text: #191f28;
+  --text-sub: #6b7684;
+  --line: #e5e8eb;
+  --accent: #2563eb;
+  --accent-soft: #e8f0fe;
+  --ok: #16a34a;
+  --ok-soft: #e9f8ef;
+  --bad: #dc2626;
+  --bad-soft: #fdecec;
+  --radius: 24px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard", sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+}
+
+.badge {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge-muted {
+  background: var(--line);
+  color: var(--text-sub);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px;
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.caption {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin: 0 0 12px;
+}
+
+.body {
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+/* Strata view */
+.strata {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stratum {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  transition: background 0.3s;
+}
+
+.stratum-ok {
+  background: var(--ok-soft);
+}
+
+.stratum-problem {
+  background: var(--bad-soft);
+}
+
+.stratum-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.stratum-ok .stratum-dot {
+  background: var(--ok);
+}
+
+.stratum-problem .stratum-dot {
+  background: var(--bad);
+}
+
+.stratum-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.stratum-state {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stratum-ok .stratum-state {
+  color: var(--ok);
+}
+
+.stratum-problem .stratum-state {
+  color: var(--bad);
+}
+
+/* Diagnosis */
+.diagnosis-label {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 8px 0 8px;
+}
+
+.actions {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.probs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  margin-top: auto;
+}
+
+.prob-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.prob-bar {
+  height: 8px;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.prob-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s;
+}
+
+.prob-value {
+  text-align: right;
+  color: var(--text-sub);
+}
+
+/* Live chart */
+.stats {
+  display: flex;
+  gap: 24px;
+  margin: 8px 0 12px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat .caption {
+  margin: 0;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.stat-unit {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-left: 2px;
+}
+
+.chart {
+  flex: 1;
+  min-height: 200px;
+}
+
+/* Fault panel */
+.fault-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.fault-btn,
+.reset-btn {
+  font-size: 16px;
+  font-weight: 600;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.fault-btn {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.fault-btn:hover {
+  background: var(--line);
+}
+
+.fault-btn-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.fault-btn-active:hover {
+  background: var(--accent);
+}
+
+.reset-btn {
+  margin-top: auto;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.reset-btn:disabled,
+.fault-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
