@@ -39,8 +39,19 @@ export default function DiagnosisCard({ tick }: { tick: Tick | null }) {
       </div>
       <p className="caption">
         Model: {tick.diagnosis.model === "lightgbm" ? "LightGBM" : "rule-based fallback"} · Explanation:{" "}
-        {tick.explanation.mode}
+        {explanationNote(tick.explanation)}
       </p>
     </section>
   );
+}
+
+const MODE_TEXT: Record<string, string> = { template: "template", local: "local LLM", api: "API LLM" };
+
+function explanationNote(e: Tick["explanation"]): string {
+  const requested = e.requested ?? e.mode;
+  if (requested === "template") return "template (offline)";
+  if (e.mode !== "template") return MODE_TEXT[e.mode] ?? e.mode;
+  if (e.pending) return `template while the ${MODE_TEXT[requested]} writes…`;
+  if (e.fallback) return `template (${MODE_TEXT[requested]} unavailable: ${e.fallback})`;
+  return "template";
 }

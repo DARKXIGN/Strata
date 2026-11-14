@@ -11,7 +11,14 @@ export interface Tick {
     layers: Record<string, LayerStatus>;
     model?: string;
   };
-  explanation: { mode: string; summary: string; actions: string[] };
+  explanation: {
+    mode: string; // what produced this text: template | local | api
+    requested?: string; // mode chosen in settings
+    summary: string;
+    actions: string[];
+    pending?: boolean; // an LLM call is running; template shown meanwhile
+    fallback?: string | null; // why the LLM text is not shown
+  };
   fault: { active: string | null; injected_at: number | null; detected_at: number | null };
 }
 
@@ -60,3 +67,13 @@ export const LAYER_ICON: Record<string, string> = {
   dns: "/icons/fluent/open_book_flat.svg",
   server: "/icons/fluent/file_cabinet_flat.svg",
 };
+
+export interface ExplainSettings {
+  mode: "template" | "local" | "api";
+  base_url: string;
+  model: string;
+  api_key_set: boolean;
+  api_key_masked: string;
+  timeout: number;
+  default_local_url?: string;
+}

@@ -6,10 +6,12 @@ import DiagnosisCard from "./components/DiagnosisCard";
 import LiveChart from "./components/LiveChart";
 import FaultPanel from "./components/FaultPanel";
 import InfoFooter from "./components/InfoFooter";
+import SettingsDialog from "./components/SettingsDialog";
 
 export default function App() {
   const { latest, history, events, connected } = useLiveData();
   const [status, setStatus] = useState<Status | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/status")
@@ -27,6 +29,9 @@ export default function App() {
           <span className={`badge ${connected ? "" : "badge-muted"}`}>
             {connected ? "Live" : "Connecting…"}
           </span>
+          <button className="header-btn" onClick={() => setSettingsOpen(true)}>
+            Settings
+          </button>
         </div>
       </header>
 
@@ -38,6 +43,7 @@ export default function App() {
       </main>
 
       <InfoFooter />
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }
