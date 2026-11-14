@@ -76,3 +76,20 @@ class SafetyTests(unittest.TestCase):
         for dev in ("enp0s6", "docker0", "veth28d58f8"):
             with self.assertRaises(RuntimeError):
                 NetnsFaultController(dev=dev)
+
+
+class StaleEnvTests(unittest.TestCase):
+    def test_old_env_values_are_reported(self):
+        import os
+        from unittest import mock
+
+        from config import stale_env_problems
+
+        old = {"STRATA_VETH_HOST": "st-host", "STRATA_DNS_PRIMARY": "1.1.1.1"}
+        with mock.patch.dict(os.environ, old):
+            problems = stale_env_problems()
+        self.assertTrue(any("strata-host" in p for p in problems))
+        self.assertTrue(any("STRATA_DNS_PRIMARY" in p for p in problems))
+        new = {"STRATA_VETH_HOST": "strata-host", "STRATA_DNS_SERVERS": "1.1.1.1"}
+        with mock.patch.dict(os.environ, new, clear=True):
+            self.assertEqual(stale_env_problems(), [])
