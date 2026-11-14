@@ -38,11 +38,7 @@ class Classifier:
             meta = json.loads(meta_file.read_text())
             if meta.get("features") != MODEL_FEATURES:
                 raise ValueError("model was trained with a different feature list; retrain it")
-            # Read the text ourselves and normalize line endings: a git checkout on Windows
-            # can turn LF into CRLF, and LightGBM's parser then aborts the whole process
-            # (not a catchable exception) with "Model format error, expect a tree here".
-            text = model_file.read_bytes().decode("utf-8").replace("\r\n", "\n")
-            return cls(lgb.Booster(model_str=text), meta)
+            return cls(lgb.Booster(model_file=str(model_file)), meta)
         except Exception as exc:  # keep the demo running on any load problem
             log.error("failed to load model (%s); using dummy rules", exc)
             return cls()

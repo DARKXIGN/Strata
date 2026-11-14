@@ -1,8 +1,3 @@
 # Windows batch files must keep CRLF line endings.
 *.cmd text eol=crlf
 *.bat text eol=crlf
-
-# Trained model artifacts must be stored and checked out byte-for-byte.
-models/*.txt -text
-models/*.pkl binary
-models/*.json -text

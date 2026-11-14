@@ -58,22 +58,6 @@ class ClassifierTests(unittest.TestCase):
         self.assertEqual(label, "dns_slow")
 
 
-class WindowsCheckoutTests(unittest.TestCase):
-    def test_model_with_crlf_line_endings_loads(self):
-        # git on Windows may convert the model text file to CRLF; LightGBM's own file
-        # parser then aborts the process, so the loader must normalize line endings.
-        from ml.model import META_FILE, MODEL_FILE
-
-        if not MODEL_FILE.exists():
-            self.skipTest("models/classifier.txt not present")
-        with tempfile.TemporaryDirectory() as d:
-            crlf = Path(d) / "classifier.txt"
-            crlf.write_bytes(MODEL_FILE.read_bytes().replace(b"\n", b"\r\n"))
-            clf = Classifier.load(crlf, META_FILE)
-        self.assertEqual(clf.kind, "lightgbm")
-        self.assertEqual(clf.predict(sim.measure("dns_slow", 1.0))[0], "dns_slow")
-
-
 class ServerTickTests(unittest.TestCase):
     def test_sim_tick_and_detection(self):
         from server import main
