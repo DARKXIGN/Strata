@@ -76,11 +76,12 @@ button {
 
 @media (max-width: 860px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 .card {
+  min-width: 0;
   background: var(--card);
   border-radius: var(--radius);
   padding: 24px;
@@ -108,25 +109,123 @@ button {
 }
 
 /* Strata view */
+.tossface {
+  font-family: "Tossface", sans-serif;
+  font-style: normal;
+  line-height: 1;
+}
+
 .strata {
+  --rail-x: 30px;
+  position: relative;
   list-style: none;
-  margin: 0;
+  margin: 4px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+
+/* The drill line: grey rail, blue fill down to the current dig depth. */
+.strata::before,
+.strata::after {
+  content: "";
+  position: absolute;
+  left: var(--rail-x);
+  top: 24px;
+  width: 2px;
+  border-radius: 2px;
+  transform: translateX(-1px);
+}
+
+.strata::before {
+  bottom: 24px;
+  background: var(--line);
+}
+
+.strata::after {
+  background: var(--accent);
+  height: calc((100% - 48px) * min(var(--depth), var(--count) - 1) / max(var(--count) - 1, 1));
+  transition: height 0.3s ease;
 }
 
 .stratum {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 14px;
+  gap: 14px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 16px;
+  background: transparent;
   transition: background 0.3s;
 }
 
-.stratum-ok {
+.stratum-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 0 0 2px var(--line);
+  transition: box-shadow 0.3s, opacity 0.3s;
+}
+
+.stratum-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stratum-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stratum-evidence {
+  font-size: 13px;
+  color: var(--text-sub);
+  overflow-wrap: anywhere;
+}
+
+.stratum-state {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.stratum-pending .stratum-icon {
+  opacity: 0.35;
+}
+
+.stratum-pending .stratum-name {
+  color: var(--text-sub);
+}
+
+.stratum-digging {
+  background: var(--accent-soft);
+}
+
+.stratum-digging .stratum-icon {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.stratum-digging .stratum-state {
+  color: var(--accent);
+}
+
+.stratum-ok .stratum-icon {
+  box-shadow: 0 0 0 2px var(--ok);
+}
+
+.stratum-ok .stratum-state {
+  color: var(--ok);
   background: var(--ok-soft);
 }
 
@@ -134,36 +233,30 @@ button {
   background: var(--bad-soft);
 }
 
-.stratum-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.stratum-ok .stratum-dot {
-  background: var(--ok);
-}
-
-.stratum-problem .stratum-dot {
-  background: var(--bad);
-}
-
-.stratum-name {
-  flex: 1;
-  font-weight: 600;
-}
-
-.stratum-state {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.stratum-ok .stratum-state {
-  color: var(--ok);
+.stratum-problem .stratum-icon {
+  box-shadow: 0 0 0 2px var(--bad);
 }
 
 .stratum-problem .stratum-state {
-  color: var(--bad);
+  color: #fff;
+  background: var(--bad);
+}
+
+.stratum-unmeasured .stratum-state {
+  color: var(--text-sub);
+  background: var(--bg);
+}
+
+.stratum-unmeasured .stratum-icon {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strata::after,
+  .stratum,
+  .stratum-icon {
+    transition: none;
+  }
 }
 
 /* Diagnosis */
@@ -219,7 +312,8 @@ button {
 /* Live chart */
 .stats {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 8px 24px;
   margin: 8px 0 12px;
 }
 
@@ -244,8 +338,126 @@ button {
 }
 
 .chart {
+  width: 100%;
+}
+
+.chart-main {
   flex: 1;
-  min-height: 200px;
+  min-height: 180px;
+}
+
+.chart-loss {
+  height: 88px;
+}
+
+.chart-subtitle {
+  margin: 8px 0 0;
+}
+
+.fault-note {
+  margin: 0 0 8px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 4px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.legend-dashed {
+  height: 0;
+  border-top: 3px dashed;
+  border-radius: 0;
+}
+
+.legend-rule {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  border-radius: 1px;
+}
+
+.legend-rule-dashed {
+  width: 0;
+  border-left: 2px dashed #4e5968;
+}
+
+.chart-tooltip {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+  min-width: 150px;
+}
+
+.chart-tooltip-time {
+  color: var(--text-sub);
+  margin-bottom: 4px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.7;
+}
+
+.chart-tooltip-name {
+  flex: 1;
+  color: var(--text-sub);
+}
+
+.chart-tooltip-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Info area */
+.info {
+  margin-top: 24px;
+  padding: 0 8px;
+}
+
+.info a {
+  color: var(--text-sub);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.license {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-sub);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin: 8px 0 0;
 }
 
 /* Fault panel */

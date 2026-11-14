@@ -5,9 +5,10 @@ import StrataView from "./components/StrataView";
 import DiagnosisCard from "./components/DiagnosisCard";
 import LiveChart from "./components/LiveChart";
 import FaultPanel from "./components/FaultPanel";
+import InfoFooter from "./components/InfoFooter";
 
 export default function App() {
-  const { latest, history, connected } = useLiveData();
+  const { latest, history, events, connected } = useLiveData();
   const [status, setStatus] = useState<Status | null>(null);
 
   useEffect(() => {
@@ -32,9 +33,11 @@ export default function App() {
       <main className="grid">
         <StrataView layers={status?.layers ?? []} tick={latest} />
         <DiagnosisCard tick={latest} />
-        <LiveChart history={history} />
+        <LiveChart history={history} events={events} />
         <FaultPanel injectable={status?.injectable ?? []} active={latest?.fault.active ?? null} />
       </main>
+
+      <InfoFooter />
     </div>
   );
 }

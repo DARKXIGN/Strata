@@ -45,9 +45,15 @@ class Hub:
 hub = Hub()
 
 
+UNMEASURED_LAYERS = {"wifi"}  # shown on the strata view, never diagnosed
+
+
 def layer_status(label: str) -> dict[str, str]:
     bad = LABEL_LAYER.get(label)
-    return {layer: ("problem" if layer == bad else "ok") for layer in LAYERS}
+    return {
+        layer: "unmeasured" if layer in UNMEASURED_LAYERS else ("problem" if layer == bad else "ok")
+        for layer in LAYERS
+    }
 
 
 def tick() -> dict:

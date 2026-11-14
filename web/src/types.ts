@@ -1,4 +1,4 @@
-export type LayerStatus = "ok" | "problem";
+export type LayerStatus = "ok" | "problem" | "unmeasured";
 
 export interface Tick {
   type: "tick";
@@ -41,4 +41,21 @@ export const LAYER_TEXT: Record<string, string> = {
   isp: "ISP link",
   dns: "DNS",
   server: "Destination server",
+};
+
+/** Fault lifecycle moments drawn as markers on the time series. */
+export interface FaultEvent {
+  kind: "inject" | "detect" | "reset";
+  ts: number;
+  label: string | null;
+}
+
+/** Tossface glyph per strata layer. */
+export const LAYER_ICON: Record<string, string> = {
+  device: "\u{1F4BB}", // laptop
+  wifi: "\u{1F4F6}", // antenna bars
+  router: "\u{1F4E1}", // satellite antenna
+  isp: "\u{1F310}", // globe with meridians
+  dns: "\u{1F4D6}", // open book
+  server: "\u{1F5C4}\u{FE0F}", // file cabinet
 };
