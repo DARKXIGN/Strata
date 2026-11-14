@@ -1,0 +1,22 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.9-Ubuntu <<>> +tries=1 +time=2 @9.9.9.9 example.com A
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 38472
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;example.com.                   IN      A
+
+;; ANSWER SECTION:
+example.com.            257     IN      A       104.20.23.154
+example.com.            257     IN      A       172.66.147.243
+
+;; Query time: 3 msec
+;; SERVER: 9.9.9.9#53(9.9.9.9) (UDP)
+;; WHEN: Sat Nov 14 21:20:58 UTC 2026
+;; MSG SIZE  rcvd: 72
+

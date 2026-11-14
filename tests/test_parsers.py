@@ -176,3 +176,24 @@ class MissingToolTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RealCaptureTests(unittest.TestCase):
+    """Outputs captured on the OCI host inside the strata namespace (Nov 2026)."""
+
+    def test_round_matches_logged_row(self):
+        row = build_row({
+            "ext_ping": fx("oci_ping_ext.txt"),
+            "dns_alt": fx("oci_dig_alt.txt"),
+            "traceroute": fx("oci_traceroute.txt"),
+            "curl": fx("oci_curl.txt"),
+        }, "8.8.8.8")
+        # Values the collector printed for this same round on the host.
+        self.assertEqual(row["ext_rtt_ms"], 33.544)
+        self.assertEqual(row["ext_loss_pct"], 0.0)
+        self.assertEqual(row["dns_alt_ms"], 3.0)
+        self.assertEqual(row["trace_hops"], 7.0)
+        self.assertEqual(row["trace_first_hop_ms"], 0.033)
+        self.assertEqual(row["trace_max_hop_ms"], 36.148)
+        self.assertEqual(row["trace_jump_hop"], 4.0)
+        self.assertEqual(row["throughput_mbps"], 112.293)
