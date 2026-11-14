@@ -32,7 +32,6 @@ export const LABEL_TEXT: Record<string, string> = {
   bandwidth_limit: "Bandwidth limit",
   dns_slow: "Slow DNS",
   dns_failure: "DNS failure",
-  weak_wifi: "Weak Wi-Fi",
 };
 
 export const LAYER_TEXT: Record<string, string> = {

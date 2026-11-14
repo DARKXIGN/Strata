@@ -9,10 +9,10 @@ LABELS: list[str] = [
     "bandwidth_limit",
     "dns_slow",
     "dns_failure",
-    "weak_wifi",
 ]
 
-# Strata layers, top (closest to user) to bottom.
+# Strata layers, top (closest to user) to bottom. "wifi" is shown but never diagnosed
+# (the OCI test host has no Wi-Fi).
 LAYERS: list[str] = ["device", "wifi", "router", "isp", "dns", "server"]
 
 # Layer flagged on the dashboard for each label. Link faults show on the ISP/link layer.
@@ -23,7 +23,6 @@ LABEL_LAYER: dict[str, str | None] = {
     "bandwidth_limit": "isp",
     "dns_slow": "dns",
     "dns_failure": "dns",
-    "weak_wifi": "wifi",
 }
 
 INJECTABLE: list[str] = [label for label in LABELS if label != "normal"]

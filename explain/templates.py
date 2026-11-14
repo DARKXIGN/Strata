@@ -66,14 +66,4 @@ def render(label: str, row: FeatureRow) -> tuple[str, list[str]]:
                 "Flush the local DNS cache and try again.",
             ],
         )
-    if label == "weak_wifi":
-        return (
-            f"Wi-Fi signal is weak ({_f(row, 'wifi_signal_pct')}%), and delay and loss already appear "
-            "before the router. The problem is the radio link, not the internet.",
-            [
-                "Move closer to the router or remove obstacles.",
-                "Switch to a less crowded Wi-Fi band or channel.",
-                "Use a wired connection for critical tasks.",
-            ],
-        )
     return ("The measurements look unusual, but the cause is unclear.", ["Run the diagnosis again."])

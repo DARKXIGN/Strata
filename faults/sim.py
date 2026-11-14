@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from faults import INJECTABLE
 
@@ -14,6 +14,7 @@ class FaultState:
     name: str | None = None
     severity: float = 1.0
     injected_at: float | None = None
+    params: dict[str, float] = field(default_factory=dict)
 
 
 class SimFaultController:
