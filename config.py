@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import platform
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,8 +20,14 @@ def _has_root() -> bool:
 
 
 def can_inject_real_faults() -> bool:
-    """Real fault injection needs Linux (tc netem) and root privileges."""
-    return platform.system() == "Linux" and _has_root()
+    """Real fault injection needs Linux, root, tc, and the strata namespace from scripts/netns_up.sh."""
+    netns = os.getenv("STRATA_NETNS", "strata")
+    return (
+        platform.system() == "Linux"
+        and _has_root()
+        and shutil.which("tc") is not None
+        and Path(f"/run/netns/{netns}").exists()
+    )
 
 
 @dataclass(frozen=True)
@@ -31,7 +38,7 @@ class Settings:
     llm_base_url: str
     llm_model: str
     llm_timeout: float
-    fault_interface: str
+    netns: str
     tick_seconds: float = 1.0
 
 
@@ -40,7 +47,7 @@ def load_settings() -> Settings:
     if requested_sim:
         sim, reason = True, "SIM_MODE=1"
     elif not can_inject_real_faults():
-        sim, reason = True, f"forced: {platform.system()} without root cannot inject faults"
+        sim, reason = True, "forced: needs Linux, root, tc and the strata namespace"
     else:
         sim, reason = False, "real"
     return Settings(
@@ -50,5 +57,5 @@ def load_settings() -> Settings:
         llm_base_url=os.getenv("LLM_BASE_URL", "").strip(),
         llm_model=os.getenv("LLM_MODEL", "").strip(),
         llm_timeout=float(os.getenv("LLM_TIMEOUT", "3") or 3),
-        fault_interface=os.getenv("FAULT_INTERFACE", "").strip(),
+        netns=os.getenv("STRATA_NETNS", "strata").strip() or "strata",
     )
