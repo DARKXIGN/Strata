@@ -10,6 +10,7 @@ export interface Tick {
     layer: string | null;
     layers: Record<string, LayerStatus>;
     model?: string;
+    contributions?: Contribution[];
   };
   explanation: {
     mode: string; // what produced this text: template | local | api
@@ -20,6 +21,7 @@ export interface Tick {
     fallback?: string | null; // why the LLM text is not shown
   };
   fault: { active: string | null; injected_at: number | null; detected_at: number | null };
+  anomaly?: Anomaly | null;
 }
 
 export interface Status {
@@ -76,4 +78,58 @@ export interface ExplainSettings {
   api_key_masked: string;
   timeout: number;
   default_local_url?: string;
+}
+
+export interface Contribution {
+  feature: string;
+  value: number | null;
+  contribution: number; // SHAP, raw model score: + pushes toward the diagnosis, - away
+}
+
+export interface Anomaly {
+  unusual: boolean;
+  by: "range" | "forest" | null;
+  feature: string; // the feature furthest from its usual value
+  value: number | null;
+  usual: number;
+  z: number;
+}
+
+/** Human names and units for model features. */
+export const FEATURE_TEXT: Record<string, { name: string; unit: "ms" | "%" | "Mbps" | "flag" | "count" | "hop" }> = {
+  gw_rtt_ms: { name: "Gateway round trip", unit: "ms" },
+  gw_jitter_ms: { name: "Gateway jitter", unit: "ms" },
+  gw_loss_pct: { name: "Gateway loss", unit: "%" },
+  ext_rtt_ms: { name: "Internet round trip", unit: "ms" },
+  ext_jitter_ms: { name: "Internet jitter", unit: "ms" },
+  ext_loss_pct: { name: "Internet loss", unit: "%" },
+  dns_primary_ms: { name: "Configured DNS time", unit: "ms" },
+  dns_primary_ok: { name: "Configured DNS answered", unit: "flag" },
+  dns_alt_ms: { name: "Alternate DNS time", unit: "ms" },
+  dns_alt_ok: { name: "Alternate DNS answered", unit: "flag" },
+  trace_hops: { name: "Hops to destination", unit: "count" },
+  trace_first_hop_ms: { name: "First hop delay", unit: "ms" },
+  trace_max_hop_ms: { name: "Slowest hop delay", unit: "ms" },
+  trace_jump_hop: { name: "Hop where delay jumps", unit: "hop" },
+  throughput_mbps: { name: "Download speed", unit: "Mbps" },
+  ext_minus_gw_ms: { name: "Delay beyond the gateway", unit: "ms" },
+  ext_loss_minus_gw_loss: { name: "Loss beyond the gateway", unit: "%" },
+  dns_max_ms: { name: "Slowest DNS lookup", unit: "ms" },
+  dns_over_rtt_ms: { name: "DNS time beyond round trip", unit: "ms" },
+  dns_fail_count: { name: "DNS resolvers failing", unit: "count" },
+  dns_primary_only_fail: { name: "Only configured DNS failing", unit: "flag" },
+};
+
+export function featureName(key: string): string {
+  return FEATURE_TEXT[key]?.name ?? key;
+}
+
+export function featureValue(key: string, v: number | null): string {
+  if (v == null) return "no answer";
+  const unit = FEATURE_TEXT[key]?.unit;
+  if (unit === "flag") return v >= 0.5 ? "yes" : "no";
+  if (unit === "hop") return v === 0 ? "none" : `hop ${v.toFixed(0)}`;
+  if (unit === "count") return v.toFixed(0);
+  const digits = Math.abs(v) < 10 ? 1 : 0;
+  return `${v.toFixed(digits)} ${unit}`;
 }

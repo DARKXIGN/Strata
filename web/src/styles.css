@@ -11,6 +11,29 @@
   --bad: #dc2626;
   --bad-soft: #fdecec;
   --radius: 24px;
+  --on-accent: #ffffff;
+  --on-status: #ffffff;
+  --card-border: transparent;
+  --warn-soft: #fff4e5;
+}
+
+/* High-contrast dark version: black background, yellow text. */
+:root[data-theme="contrast"] {
+  --bg: #000000;
+  --card: #000000;
+  --text: #ffe600;
+  --text-sub: #ffe600;
+  --line: #ffe600;
+  --accent: #ffe600;
+  --accent-soft: #1f1c00;
+  --ok: #5cff8f;
+  --ok-soft: #002912;
+  --bad: #ff6b6b;
+  --bad-soft: #330000;
+  --on-accent: #000000;
+  --on-status: #000000;
+  --card-border: #ffe600;
+  --warn-soft: #1f1c00;
 }
 
 * {
@@ -22,6 +45,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: "Pretendard", sans-serif;
+  transition: background 0.2s, color 0.2s;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
@@ -40,6 +64,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
@@ -51,6 +76,8 @@ button {
 
 .badges {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -82,6 +109,7 @@ button {
 
 .card {
   min-width: 0;
+  border: 2px solid var(--card-border);
   background: var(--card);
   border-radius: var(--radius);
   padding: 24px;
@@ -231,7 +259,7 @@ button {
 }
 
 .stratum-problem .stratum-state {
-  color: #fff;
+  color: var(--on-status);
   background: var(--bad);
 }
 
@@ -253,11 +281,37 @@ button {
 }
 
 /* Diagnosis */
+.diagnosis-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 8px 0;
+}
+
 .diagnosis-label {
   font-size: 22px;
   font-weight: 700;
   color: var(--accent);
-  margin: 8px 0 8px;
+}
+
+.diagnosis-conf {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.pill-warn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.diagnosis-foot {
+  margin-top: auto;
 }
 
 .actions {
@@ -388,7 +442,7 @@ button {
 
 .legend-rule-dashed {
   width: 0;
-  border-left: 2px dashed #4e5968;
+  border-left: 2px dashed;
 }
 
 .chart-tooltip {
@@ -483,7 +537,7 @@ button {
 
 .fault-btn-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .fault-btn-active:hover {
@@ -652,7 +706,7 @@ button {
 
 .btn-primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-soft {
@@ -663,4 +717,183 @@ button {
 .btn-ghost {
   background: transparent;
   color: var(--text-sub);
+}
+
+/* Why this diagnosis */
+.card-wide {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.why-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 16px 40px;
+  margin-top: 8px;
+}
+
+@media (max-width: 860px) {
+  .why-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.why-sub {
+  margin: 0 0 10px;
+}
+
+.why-legend {
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.prob-row-top .prob-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.contribs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contrib-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 1.3fr) 40px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.contrib-name {
+  overflow-wrap: anywhere;
+}
+
+.contrib-value {
+  color: var(--text-sub);
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.contrib-track {
+  position: relative;
+  height: 10px;
+}
+
+.contrib-axis {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--line);
+}
+
+.contrib-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.contrib-pos,
+.contrib-key-pos {
+  background: var(--accent);
+}
+
+.contrib-neg,
+.contrib-key-neg {
+  background: var(--text-sub);
+  opacity: 0.45;
+}
+
+.contrib-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin: 0 4px 0 6px;
+  vertical-align: -1px;
+}
+
+.contrib-num {
+  text-align: right;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.anomaly {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.anomaly-ok {
+  background: var(--bg);
+  color: var(--text-sub);
+}
+
+.anomaly-info {
+  background: var(--accent-soft);
+}
+
+.anomaly-warn {
+  background: var(--warn-soft);
+  border: 1px solid var(--line);
+}
+
+/* High-contrast tweaks for controls that use fills */
+:root[data-theme="contrast"] .fault-btn,
+:root[data-theme="contrast"] .reset-btn,
+:root[data-theme="contrast"] .badge,
+:root[data-theme="contrast"] .header-btn,
+:root[data-theme="contrast"] .segmented,
+:root[data-theme="contrast"] .input,
+:root[data-theme="contrast"] .btn-soft,
+:root[data-theme="contrast"] .stratum-state {
+  border: 2px solid var(--line);
+}
+
+:root[data-theme="contrast"] .fault-btn:hover,
+:root[data-theme="contrast"] .header-btn:hover {
+  background: var(--accent-soft);
+}
+
+:root[data-theme="contrast"] .fault-btn-active,
+:root[data-theme="contrast"] .segment-on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+:root[data-theme="contrast"] .stratum-ok .stratum-state {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+:root[data-theme="contrast"] .stratum-problem .stratum-state {
+  border-color: var(--bad);
+}
+
+:root[data-theme="contrast"] .stratum-icon {
+  background: #ffffff;
+}
+
+:root[data-theme="contrast"] .overlay {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+:root[data-theme="contrast"] .dialog,
+:root[data-theme="contrast"] .chart-tooltip,
+:root[data-theme="contrast"] .license {
+  border: 2px solid var(--line);
+}
+
+:root[data-theme="contrast"] .info a,
+:root[data-theme="contrast"] .link-btn {
+  color: var(--text);
+  text-decoration: underline;
 }

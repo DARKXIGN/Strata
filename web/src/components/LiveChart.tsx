@@ -14,19 +14,16 @@ import type { TooltipProps } from "recharts";
 import type { FaultEvent, Tick } from "../types";
 import { LABEL_TEXT } from "../types";
 import { HISTORY_SECONDS } from "../useLiveData";
-
-const C = {
-  latency: "#2563EB",
-  jitter: "#8B95A1",
-  grid: "#E5E8EB",
-  axis: "#8B95A1",
-  marker: "#4E5968",
-};
+import { CHART_COLORS } from "../theme";
+import type { Theme } from "../theme";
 
 interface Props {
   history: Tick[];
   events: FaultEvent[];
+  theme: Theme;
 }
+
+type Palette = (typeof CHART_COLORS)[Theme];
 
 interface Point {
   t: number;
@@ -39,7 +36,8 @@ const X_DOMAIN: [number, number] = [-HISTORY_SECONDS, 0];
 const X_TICKS = [-90, -60, -30, 0];
 const xLabel = (v: number) => (v === 0 ? "now" : `${v}s`);
 
-export default function LiveChart({ history, events }: Props) {
+export default function LiveChart({ history, events, theme }: Props) {
+  const C = CHART_COLORS[theme];
   const now = history[history.length - 1]?.ts ?? 0;
   const data: Point[] = history.map((t) => ({
     t: Math.round((t.ts - now) * 10) / 10,
@@ -96,7 +94,7 @@ export default function LiveChart({ history, events }: Props) {
           <span className="legend-swatch legend-dashed" style={{ borderColor: C.jitter }} /> Jitter
         </span>
         <span className="legend-item">
-          <span className="legend-rule legend-rule-dashed" /> Fault injected / reset
+          <span className="legend-rule legend-rule-dashed" style={{ borderColor: C.marker }} /> Fault injected / reset
         </span>
         <span className="legend-item">
           <span className="legend-rule" style={{ background: C.latency }} /> Detected
@@ -116,7 +114,7 @@ export default function LiveChart({ history, events }: Props) {
               width={40}
               allowDecimals={false}
             />
-            <Tooltip content={<ChartTooltip />} cursor={{ stroke: C.axis, strokeWidth: 1 }} isAnimationActive={false} />
+            <Tooltip content={<ChartTooltip C={C} />} cursor={{ stroke: C.axis, strokeWidth: 1 }} isAnimationActive={false} />
             {renderMarkers()}
             <Line
               dataKey="latency"
@@ -124,7 +122,7 @@ export default function LiveChart({ history, events }: Props) {
               stroke={C.latency}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
+              activeDot={{ r: 4, strokeWidth: 2, stroke: C.surface }}
               isAnimationActive={false}
               connectNulls={false}
             />
@@ -135,7 +133,7 @@ export default function LiveChart({ history, events }: Props) {
               strokeWidth={2}
               strokeDasharray="5 4"
               dot={false}
-              activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
+              activeDot={{ r: 4, strokeWidth: 2, stroke: C.surface }}
               isAnimationActive={false}
               connectNulls={false}
             />
@@ -185,7 +183,7 @@ export default function LiveChart({ history, events }: Props) {
   );
 }
 
-function ChartTooltip({ active, payload }: TooltipProps<number, string>) {
+function ChartTooltip({ active, payload, C }: TooltipProps<number, string> & { C: Palette }) {
   if (!active || !payload?.length) return null;
   const p = payload[0].payload as Point;
   return (

@@ -7,11 +7,14 @@ import LiveChart from "./components/LiveChart";
 import FaultPanel from "./components/FaultPanel";
 import InfoFooter from "./components/InfoFooter";
 import SettingsDialog from "./components/SettingsDialog";
+import WhyCard from "./components/WhyCard";
+import { useTheme } from "./theme";
 
 export default function App() {
   const { latest, history, events, connected } = useLiveData();
   const [status, setStatus] = useState<Status | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [theme, setTheme] = useTheme();
 
   useEffect(() => {
     fetch("/api/status")
@@ -29,6 +32,13 @@ export default function App() {
           <span className={`badge ${connected ? "" : "badge-muted"}`}>
             {connected ? "Live" : "Connecting…"}
           </span>
+          <button
+            className="header-btn"
+            aria-pressed={theme === "contrast"}
+            onClick={() => setTheme(theme === "contrast" ? "light" : "contrast")}
+          >
+            {theme === "contrast" ? "Standard colors" : "High contrast"}
+          </button>
           <button className="header-btn" onClick={() => setSettingsOpen(true)}>
             Settings
           </button>
@@ -38,8 +48,9 @@ export default function App() {
       <main className="grid">
         <StrataView layers={status?.layers ?? []} tick={latest} />
         <DiagnosisCard tick={latest} />
-        <LiveChart history={history} events={events} />
+        <LiveChart history={history} events={events} theme={theme} />
         <FaultPanel injectable={status?.injectable ?? []} active={latest?.fault.active ?? null} />
+        <WhyCard tick={latest} />
       </main>
 
       <InfoFooter />
