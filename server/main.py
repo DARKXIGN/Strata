@@ -19,11 +19,15 @@ import signal
 import time
 from contextlib import asynccontextmanager
 
+from dataclasses import replace
+
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 
 from collector import sim as sim_collector
 from config import load_settings
-from explain import explain
+from explain import config as explain_config
+from explain.service import ExplainService
 from faults import INJECTABLE, LABEL_LAYER, LABELS, LAYERS
 from faults.sim import SimFaultController
 from ml.model import Classifier
@@ -33,6 +37,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 
 settings = load_settings()
 classifier = Classifier.load()
+explainer = ExplainService()
 mode, mode_reason = ("sim", settings.sim_reason) if settings.sim_mode else ("real", "real")
 collector = None
 
@@ -52,7 +57,7 @@ if mode == "real":
 else:
     faults = SimFaultController()
 
-log.info("mode=%s (%s), classifier=%s", mode, mode_reason, classifier.kind)
+log.info("mode=%s (%s), classifier=%s, explain=%s", mode, mode_reason, classifier.kind, explainer.settings.mode)
 
 
 def _safe_reset() -> None:
@@ -129,7 +134,7 @@ def build_tick(row: dict, measured_at: float) -> dict:
             "layers": layer_status(label),
             "model": classifier.kind,
         },
-        "explanation": explain(label, probs, row),
+        "explanation": explainer.explain(label, probs, row, LABEL_LAYER.get(label)),
         "fault": {
             "active": state.name,
             "params": state.params,
@@ -178,7 +183,7 @@ def status() -> dict:
         "sim_mode": mode == "sim",
         "sim_reason": mode_reason,
         "fault_mode": faults.mode,
-        "explain_mode": settings.explain_mode,
+        "explain_mode": explainer.settings.mode,
         "model": classifier.info(),
         "labels": LABELS,
         "layers": LAYERS,
@@ -206,6 +211,42 @@ def inject_fault(name: str) -> dict:
         raise HTTPException(status_code=500, detail=f"inject failed: {exc}") from exc
     hub.detected_at = None
     return {"active": state.name, "params": state.params, "injected_at": state.injected_at}
+
+
+class ExplainSettingsIn(BaseModel):
+    mode: str
+    base_url: str = ""
+    model: str = ""
+    # None keeps the saved key, "" clears it, anything else replaces it.
+    api_key: str | None = None
+
+
+def _merge(body: ExplainSettingsIn) -> explain_config.ExplainSettings:
+    error = explain_config.validate(body.mode, body.base_url.strip(), body.model.strip())
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    current = explainer.settings
+    key = current.api_key if body.api_key is None else body.api_key.strip()
+    return replace(current, mode=body.mode, base_url=body.base_url.strip(), model=body.model.strip(), api_key=key)
+
+
+@app.get("/api/settings/explain")
+def get_explain_settings() -> dict:
+    return {**explainer.settings.public(), "default_local_url": explain_config.DEFAULT_LOCAL_URL}
+
+
+@app.put("/api/settings/explain")
+def put_explain_settings(body: ExplainSettingsIn) -> dict:
+    new = _merge(body)
+    explain_config.save(new)
+    explainer.update(new)
+    log.info("explanation settings changed: %r", new)
+    return new.public()
+
+
+@app.post("/api/settings/explain/test")
+def test_explain_settings(body: ExplainSettingsIn) -> dict:
+    return explainer.test(_merge(body))
 
 
 @app.websocket("/ws")
