@@ -155,6 +155,24 @@ class BuildRowTests(unittest.TestCase):
         self.assertIsNone(row["throughput_mbps"])
         self.assertIsNone(row["dns_primary_ok"])  # probe missing -> unknown, not failed
 
+    def test_without_traceroute(self):
+        row = build_row({"ext_ping": fx("ping_ok.txt"), "traceroute": ""})
+        self.assertIsNone(row["trace_hops"])
+        self.assertIsNone(row["trace_jump_hop"])
+
+
+class MissingToolTests(unittest.TestCase):
+    def test_round_survives_missing_binaries(self):
+        from collector.linux import CollectorConfig, LinuxCollector
+        col = LinuxCollector(CollectorConfig(netns=None, throughput_ip="192.0.2.1"))
+        col.gateway = "192.0.2.254"
+        col.has_traceroute = False
+        col._argv = lambda cmd: ["/nonexistent/" + cmd[0], *cmd[1:]]
+        row = col.measure()
+        self.assertEqual(set(row), set(FEATURES))
+        self.assertIsNone(row["trace_hops"])
+        self.assertEqual(row["ext_loss_pct"], 100.0)
+
 
 if __name__ == "__main__":
     unittest.main()

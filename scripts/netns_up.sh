@@ -3,30 +3,25 @@
 #
 # WHAT THIS CHANGES (all undone by scripts/netns_down.sh):
 #   1. Creates network namespace "strata".
-#   2. Creates a veth pair: st-host (host side, 10.200.0.1/24) <-> st-ns (inside the
-#      namespace, 10.200.0.2/24), and a default route in the namespace via 10.200.0.1.
-#   3. Writes /etc/netns/strata/resolv.conf (DNS config seen ONLY inside the namespace).
-#   4. Sets net.ipv4.ip_forward=1 (host-wide sysctl). The old value is saved in
-#      /run/strata/ip_forward and restored on teardown.
-#   5. Adds iptables rules, each tagged with comment "strata":
-#        nat/POSTROUTING  MASQUERADE 10.200.0.0/24 out of the main interface
-#        filter/FORWARD   ACCEPT st-host -> main, and main -> st-host for replies only
-#      Rules are not saved persistently; a reboot drops them.
+#   2. Creates a veth pair strata-host (host side, 10.200.0.1/24) <-> strata-ns (inside
+#      the namespace, 10.200.0.2/24) and a default route in the namespace via 10.200.0.1.
+#   3. Writes /etc/netns/strata/resolv.conf with 1.1.1.1 and 8.8.8.8. Only processes run
+#      with `ip netns exec strata` see it.
+#   4. Adds exactly three iptables rules (iptables command only, comment "strata"):
+#        nat/POSTROUTING  -s 10.200.0.0/24 -o <main if> -j MASQUERADE     (appended)
+#        DOCKER-USER      -i strata-host -o <main if> -j ACCEPT           (inserted at top)
+#        DOCKER-USER      -i <main if> -o strata-host RELATED,ESTABLISHED (inserted at top)
 #
-# WHAT THIS DOES NOT CHANGE: the main interface's addresses, routes, qdiscs, MTU,
-# the host's /etc/resolv.conf, or any existing iptables rule. Faults are injected
-# later by faults/netns.py on st-host only.
+# WHAT THIS DOES NOT CHANGE:
+#   * the main interface (enp0s6): no address, route, qdisc or MTU change
+#   * net.ipv4.ip_forward: only checked; setup stops if it is 0
+#   * the host's /etc/resolv.conf and systemd-resolved
+#   * Docker's chains and rules, or any other existing rule
+#   * saved firewall rules: nothing runs netfilter-persistent save or writes
+#     /etc/iptables/rules.v4, so a reboot drops these rules. Do not run
+#     `netfilter-persistent save` while the namespace is up.
 set -euo pipefail
-
-NS="${STRATA_NETNS:-strata}"
-VETH_HOST="${STRATA_VETH_HOST:-st-host}"
-VETH_NS="${STRATA_VETH_NS:-st-ns}"
-GW_IP="${STRATA_GW_IP:-10.200.0.1}"
-NS_IP="${STRATA_NS_IP:-10.200.0.2}"
-SUBNET="${STRATA_SUBNET:-10.200.0.0/24}"
-DNS_PRIMARY="${STRATA_DNS_PRIMARY:-1.1.1.1}"
-STATE_DIR="${STRATA_STATE_DIR:-/run/strata}"
-TAG="strata"
+source "$(dirname "$0")/netns_env.sh"
 
 [[ $EUID -eq 0 ]] || { echo "run with sudo" >&2; exit 1; }
 for tool in ip iptables sysctl; do
@@ -34,23 +29,32 @@ for tool in ip iptables sysctl; do
 done
 
 if ip netns list | grep -qw "$NS"; then
-  echo "namespace $NS already exists. Run scripts/netns_down.sh first to recreate it." >&2
+  echo "namespace $NS already exists. Run sudo scripts/netns_down.sh first." >&2
+  exit 1
+fi
+if ip link show "$VETH_HOST" >/dev/null 2>&1; then
+  echo "$VETH_HOST already exists. Run sudo scripts/netns_down.sh first." >&2
   exit 1
 fi
 if ip -4 route show | grep -q "${SUBNET%/*}"; then
   echo "subnet $SUBNET is already routed on this host; set STRATA_SUBNET etc. to another range." >&2
   exit 1
 fi
+if [[ "$(sysctl -n net.ipv4.ip_forward)" != "1" ]]; then
+  echo "net.ipv4.ip_forward is 0. This script does not change it; enable it yourself if you accept that." >&2
+  exit 1
+fi
 
-MAIN_IF="$(ip -4 route show default | awk '/default/ {for (i=1;i<=NF;i++) if ($i=="dev") {print $(i+1); exit}}')"
+MAIN_IF="$(detect_main_if)"
 [[ -n "$MAIN_IF" ]] || { echo "could not find the default-route interface" >&2; exit 1; }
-echo "main interface (read only, used as NAT egress): $MAIN_IF"
+FWD_CHAIN="$(detect_fwd_chain)"
+set_rule_specs "$MAIN_IF"
+echo "main interface (read only): $MAIN_IF   forward rules go to: $FWD_CHAIN"
 
 # Undo partial setup if any step below fails.
 trap 'echo "setup failed; rolling back" >&2; "$(dirname "$0")/netns_down.sh"' ERR
 
 mkdir -p "$STATE_DIR"
-sysctl -n net.ipv4.ip_forward > "$STATE_DIR/ip_forward"
 echo "$MAIN_IF" > "$STATE_DIR/main_if"
 
 # 1-2. namespace and veth pair
@@ -65,21 +69,24 @@ ip netns exec "$NS" ip link set "$VETH_NS" up
 ip netns exec "$NS" ip route add default via "$GW_IP"
 
 # 3. namespace-only DNS
-mkdir -p "/etc/netns/$NS"
-printf '# managed by strata\nnameserver %s\noptions timeout:2 attempts:1\n' "$DNS_PRIMARY" > "/etc/netns/$NS/resolv.conf"
+mkdir -p "$NETNS_ETC"
+{
+  echo "# managed by strata"
+  for s in $DNS_SERVERS; do echo "nameserver $s"; done
+  echo "options timeout:2 attempts:1"
+} > "$NETNS_ETC/resolv.conf"
 
-# 4. forwarding
-sysctl -qw net.ipv4.ip_forward=1
+# 4. NAT and forward rules
+iptables -t nat -A POSTROUTING "${NAT_SPEC[@]}"
+iptables -I "$FWD_CHAIN" 1 "${FWD_OUT_SPEC[@]}"
+iptables -I "$FWD_CHAIN" 1 "${FWD_IN_SPEC[@]}"
 
-# 5. NAT and forward rules (inserted at the top so existing REJECT rules don't block them)
-iptables -t nat -A POSTROUTING -s "$SUBNET" -o "$MAIN_IF" -m comment --comment "$TAG" -j MASQUERADE
-iptables -I FORWARD 1 -i "$VETH_HOST" -o "$MAIN_IF" -m comment --comment "$TAG" -j ACCEPT
-iptables -I FORWARD 1 -i "$MAIN_IF" -o "$VETH_HOST" -m conntrack --ctstate RELATED,ESTABLISHED \
-  -m comment --comment "$TAG" -j ACCEPT
-
+trap - ERR
 echo "namespace $NS ready. Connectivity check:"
 ip netns exec "$NS" ping -n -c 2 -W 2 "$GW_IP" >/dev/null && echo "  gateway $GW_IP ok" || echo "  gateway $GW_IP FAILED"
 ip netns exec "$NS" ping -n -c 2 -W 2 8.8.8.8 >/dev/null && echo "  internet (8.8.8.8) ok" || echo "  internet FAILED"
 if command -v dig >/dev/null; then
-  ip netns exec "$NS" dig +short +time=2 +tries=1 example.com A | head -1 | sed 's/^/  dns example.com -> /'
+  ans="$(ip netns exec "$NS" dig +short +time=2 +tries=1 example.com A | head -1)"
+  [[ -n "$ans" ]] && echo "  dns example.com -> $ans" || echo "  dns FAILED"
 fi
+command -v traceroute >/dev/null || echo "  note: traceroute is not installed (sudo apt install -y traceroute)"

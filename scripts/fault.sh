@@ -2,12 +2,12 @@
 # Inject or reset one fault inside the strata namespace. Run with sudo.
 #
 # WHAT THIS CHANGES (details in faults/netns.py):
-#   inject <link fault>  replaces the root qdisc on st-host (host end of the veth pair)
+#   inject <link fault>  replaces the root qdisc on strata-host (host end of the veth pair)
 #                        with prio + netem. Gateway replies are not shaped.
 #   inject dns_slow      same, but only packets with source port 53 are delayed.
 #   inject dns_failure   points /etc/netns/strata/resolv.conf at 192.0.2.53 (unreachable).
-#   reset                deletes the st-host qdisc and restores the namespace resolv.conf.
-# Never touches the main interface or the host's /etc/resolv.conf.
+#   reset                deletes the strata-host qdisc and restores the namespace resolv.conf.
+# Never touches the main interface (enp0s6), iptables, or the host's /etc/resolv.conf.
 #
 # Examples:
 #   sudo scripts/fault.sh inject high_latency delay_ms=200 jitter_ms=20

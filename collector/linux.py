@@ -25,7 +25,9 @@ from urllib.parse import urlparse
 from collector import parsers
 from collector.features import FeatureRow, empty_row
 
-REQUIRED_TOOLS = ["ping", "dig", "traceroute", "curl", "ip"]
+REQUIRED_TOOLS = ["ping", "dig", "curl", "ip"]
+# Without traceroute the trace_* features are left empty instead of failing the round.
+OPTIONAL_TOOLS = ["traceroute"]
 
 
 @dataclass
@@ -55,8 +57,8 @@ class CollectorConfig:
         return cfg
 
 
-def missing_tools() -> list[str]:
-    return [t for t in REQUIRED_TOOLS if shutil.which(t) is None]
+def missing_tools(tools: list[str] = REQUIRED_TOOLS) -> list[str]:
+    return [t for t in tools if shutil.which(t) is None]
 
 
 class LinuxCollector:
@@ -66,6 +68,7 @@ class LinuxCollector:
         self._names = cycle(cfg.dns_names)
         self.gateway: str | None = None
         self.last_raw: dict[str, str] = {}
+        self.has_traceroute = shutil.which("traceroute") is not None
 
     # -- process helpers --------------------------------------------------------
 
@@ -80,6 +83,8 @@ class LinuxCollector:
         except subprocess.TimeoutExpired as exc:
             out = exc.stdout or ""
             return out.decode() if isinstance(out, bytes) else out
+        except OSError:  # binary missing or not executable
+            return ""
 
     # -- setup ------------------------------------------------------------------
 
@@ -129,14 +134,20 @@ class LinuxCollector:
             "ext_ping": lambda: self._ping(self.cfg.ext_target),
             "dns_primary": lambda: self._dig(None, name),
             "dns_alt": lambda: self._dig(self.cfg.dns_alt, name),
-            "traceroute": self._trace,
         }
+        if self.has_traceroute:
+            jobs["traceroute"] = self._trace
         if self.gateway:
             jobs["gw_ping"] = lambda: self._ping(self.gateway)
         # Latency probes run together; throughput runs alone afterwards so it can't queue them.
+        raw: dict[str, str] = {}
         with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
             futures = {k: pool.submit(fn) for k, fn in jobs.items()}
-            raw = {k: f.result() for k, f in futures.items()}
+            for k, f in futures.items():
+                try:
+                    raw[k] = f.result()
+                except Exception:  # one broken probe must not kill the round
+                    raw[k] = ""
         raw["curl"] = self._curl()
         self.last_raw = raw
         if self.save_raw:
@@ -167,7 +178,7 @@ def build_row(raw: dict[str, str], ext_target: str | None = None) -> FeatureRow:
             row[f"{prefix}_ms"] = d.query_ms if d.ok else None
             row[f"{prefix}_ok"] = 1.0 if d.ok else 0.0
 
-    if "traceroute" in raw:
+    if raw.get("traceroute"):
         row.update(parsers.trace_features(parsers.parse_traceroute(raw["traceroute"], ext_target)))
 
     if "curl" in raw:
@@ -186,6 +197,8 @@ def main() -> None:
 
     if missing := missing_tools():
         raise SystemExit(f"missing tools: {', '.join(missing)} (see the setup commands)")
+    if missing_tools(OPTIONAL_TOOLS):
+        print("warning: traceroute not installed; trace_* features will be empty (sudo apt install -y traceroute)")
     col = LinuxCollector(CollectorConfig.from_env(args.netns or None), args.save_raw)
     col.prepare()
     print(f"gateway={col.gateway} throughput_ip={col.cfg.throughput_ip}")

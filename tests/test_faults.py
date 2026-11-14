@@ -9,7 +9,7 @@ from faults import INJECTABLE
 from faults.netns import inject_commands, netem_args, reset_commands, resolv_text, sample_params
 from scripts.collect import plan
 
-DEV = "st-host"
+DEV = "strata-host"
 
 
 class FaultCommandTests(unittest.TestCase):
@@ -62,3 +62,17 @@ class PlanTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SafetyTests(unittest.TestCase):
+    def test_namespace_resolvers(self):
+        text = resolv_text(None)
+        self.assertIn("nameserver 1.1.1.1", text)
+        self.assertIn("nameserver 8.8.8.8", text)
+        self.assertNotIn("1.1.1.1", resolv_text("dns_failure"))
+
+    def test_refuses_non_strata_devices(self):
+        from faults.netns import NetnsFaultController
+        for dev in ("enp0s6", "docker0", "veth28d58f8"):
+            with self.assertRaises(RuntimeError):
+                NetnsFaultController(dev=dev)

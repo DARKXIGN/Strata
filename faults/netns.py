@@ -2,7 +2,7 @@
 
 WHAT THIS CHANGES (needs root, and scripts/netns_up.sh must have run first):
   * Link faults (high_latency, packet_loss, bandwidth_limit) and dns_slow:
-    replaces the root qdisc on the HOST end of the veth pair (default `st-host`) with
+    replaces the root qdisc on the HOST end of the veth pair (default `strata-host`) with
     `prio` + `netem`. Only traffic flowing from the host into the namespace is shaped.
     Replies from the gateway (10.200.0.1) are excluded, so "gateway fine, internet bad"
     stays visible. dns_slow only shapes packets with source port 53.
@@ -10,7 +10,8 @@ WHAT THIS CHANGES (needs root, and scripts/netns_up.sh must have run first):
     to point at an unreachable resolver (192.0.2.53, TEST-NET-1).
   * reset: deletes that qdisc and restores the namespace resolv.conf.
 It never touches the host's main interface, routes, or /etc/resolv.conf. Before every
-change it checks that the target device is a veth; otherwise it refuses.
+change it checks that the target device is a veth named strata-* and is not the
+default-route interface; otherwise it refuses. Uses tc only (no iptables/nft).
 
 CLI (via scripts/fault.sh):
     sudo scripts/fault.sh inject high_latency delay_ms=200
@@ -33,9 +34,10 @@ from faults import INJECTABLE
 from faults.sim import FaultState
 
 NETNS = os.getenv("STRATA_NETNS", "strata")
-VETH_HOST = os.getenv("STRATA_VETH_HOST", "st-host")
+VETH_HOST = os.getenv("STRATA_VETH_HOST", "strata-host")
 GW_IP = os.getenv("STRATA_GW_IP", "10.200.0.1")
-DNS_PRIMARY = os.getenv("STRATA_DNS_PRIMARY", "1.1.1.1")
+# Must match DNS_SERVERS in scripts/netns_env.sh.
+DNS_SERVERS = os.getenv("STRATA_DNS_SERVERS", "1.1.1.1 8.8.8.8").replace(",", " ").split()
 DEAD_RESOLVER = "192.0.2.53"
 STATE_FILE = Path(os.getenv("STRATA_STATE_DIR", "/run/strata")) / "fault.json"
 
@@ -105,8 +107,14 @@ def resolv_path(netns: str = NETNS) -> Path:
 
 
 def resolv_text(name: str | None) -> str:
-    server = DEAD_RESOLVER if name == "dns_failure" else DNS_PRIMARY
-    return f"# managed by strata faults/netns.py\nnameserver {server}\noptions timeout:2 attempts:1\n"
+    servers = [DEAD_RESOLVER] if name == "dns_failure" else DNS_SERVERS
+    lines = ["# managed by strata", *(f"nameserver {s}" for s in servers), "options timeout:2 attempts:1"]
+    return "\n".join(lines) + "\n"
+
+
+def default_route_dev() -> str | None:
+    out = subprocess.run(["ip", "-4", "route", "show", "default"], capture_output=True, text=True).stdout.split()
+    return out[out.index("dev") + 1] if "dev" in out else None
 
 
 class NetnsFaultController:
@@ -119,6 +127,10 @@ class NetnsFaultController:
         self._check_device()
 
     def _check_device(self) -> None:
+        if not self.dev.startswith("strata-"):
+            raise RuntimeError(f"refusing to shape {self.dev}: only strata-* veth devices are allowed")
+        if self.dev == default_route_dev():
+            raise RuntimeError(f"refusing to shape {self.dev}: it carries the default route")
         out = subprocess.run(["ip", "-d", "link", "show", "dev", self.dev], capture_output=True, text=True)
         if out.returncode != 0:
             raise RuntimeError(f"{self.dev} not found; run scripts/netns_up.sh first")

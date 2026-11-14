@@ -1,6 +1,6 @@
 """Collect labeled training data inside the strata namespace. Run with sudo on the OCI host.
 
-WHAT THIS CHANGES: it injects and resets faults through faults/netns.py (st-host qdisc
+WHAT THIS CHANGES: it injects and resets faults through faults/netns.py (strata-host qdisc
 and /etc/netns/strata/resolv.conf only). A reset runs between sessions, at the end,
 on Ctrl+C, on SIGTERM/SIGHUP (e.g. ssh drop), and on any error. If the process is
 killed with SIGKILL, run `sudo scripts/fault.sh reset` by hand.
@@ -34,7 +34,7 @@ sys.path.insert(0, str(ROOT))
 
 import config  # noqa: E402,F401  (loads .env)
 from collector.features import FEATURES  # noqa: E402
-from collector.linux import CollectorConfig, LinuxCollector, missing_tools  # noqa: E402
+from collector.linux import OPTIONAL_TOOLS, CollectorConfig, LinuxCollector, missing_tools  # noqa: E402
 from faults import LABELS  # noqa: E402
 from faults.netns import NetnsFaultController, sample_params  # noqa: E402
 
@@ -77,6 +77,10 @@ def run(args: argparse.Namespace) -> None:
         sys.exit("run with sudo (faults and `ip netns exec` need root)")
     if missing := missing_tools():
         sys.exit(f"missing tools: {', '.join(missing)}")
+    if missing_tools(OPTIONAL_TOOLS):
+        print("WARNING: traceroute is not installed, so trace_* columns will be empty for these rows.\n"
+              "         Install it first (sudo apt install -y traceroute) unless you really mean this.")
+        time.sleep(5)
 
     labels = args.labels or LABELS
     unknown = set(labels) - set(LABELS)
