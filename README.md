@@ -4,7 +4,7 @@
 
 When the internet feels slow, the usual answer is "restart the router". Strata measures the path instead, classifies the root cause with a model trained on real injected faults, and explains the fix in plain language.
 
-Built solo at MadHacks 2026 (theme: "Let's Dig In", TDS track). The name means layers of rock: the dashboard stacks the network path like strata and digs down until it hits the broken layer. `dig` is also the DNS lookup tool the collector runs on every measurement.
+Built solo at MadHacks 2026 (theme: "Let's Dig In"). The name means layers of rock: the dashboard stacks the network path like strata and digs down until it hits the broken layer. `dig` is also the DNS lookup tool the collector runs on every measurement.
 
 ## How it works
 
