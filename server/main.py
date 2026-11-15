@@ -33,6 +33,7 @@ from faults.sim import SimFaultController
 from ml.anomaly import AnomalyDetector
 from ml.model import MODEL_DIR, Classifier
 from storage import config as storage_config
+from server.peers import PeerControl, PeerError, load_peers
 from storage.service import StorageService
 
 log = logging.getLogger("strata")
@@ -71,6 +72,16 @@ try:
 except Exception as exc:
     storage = None
     log.warning("storage unavailable (%s); realtime diagnosis unaffected", type(exc).__name__)
+
+# Fault control for the other agents on this host (forwarded to their own servers).
+SELF_ID = storage.cfg.agent_id if storage is not None else (os.getenv("STRATA_AGENT_ID") or settings.netns)
+try:
+    peers = PeerControl(SELF_ID, load_peers(SELF_ID))
+except ValueError as exc:
+    log.error("%s; fault control limited to this agent", exc)
+    peers = PeerControl(SELF_ID, {})
+if peers.peers:
+    log.info("fault control: this agent %s, peers %s", SELF_ID, ", ".join(sorted(peers.peers)))
 
 
 def _safe_reset() -> None:
@@ -266,6 +277,50 @@ def inject_fault(name: str) -> dict:
         raise HTTPException(status_code=500, detail=f"inject failed: {exc}") from exc
     hub.detected_at = None
     return {"active": state.name, "params": state.params, "injected_at": state.injected_at}
+
+
+# -- fault control for any agent on this host ------------------------------------------
+
+def _self_entry() -> dict:
+    name = storage.cfg.agent_name if storage is not None else SELF_ID
+    return {"id": SELF_ID, "name": name, "reachable": True, "active_fault": faults.state.name,
+            "mode": mode, "self": True}
+
+
+@app.get("/api/agents/control")
+def agents_control() -> dict:
+    """Agents this dashboard can fault: this server's agent first, then its peers."""
+    return {"self_id": SELF_ID, "agents": [_self_entry(), *peers.status_all()]}
+
+
+def _apply(agent_id: str, action) -> dict:
+    """Run action(agent_id) for one agent or, with 'all', for every agent (best effort)."""
+    if agent_id == "all":
+        results = []
+        for target in [SELF_ID, *sorted(peers.peers)]:
+            try:
+                results.append({"id": target, "ok": True, **action(target)})
+            except (HTTPException, PeerError) as exc:
+                results.append({"id": target, "ok": False, "error": getattr(exc, "detail", None) or str(exc)})
+        return {"results": results}
+    if not peers.knows(agent_id):
+        raise HTTPException(status_code=404, detail=f"unknown agent: {agent_id}")
+    try:
+        return action(agent_id)
+    except PeerError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from None
+
+
+@app.post("/api/agents/{agent_id}/faults/reset")
+def agent_reset(agent_id: str) -> dict:
+    return _apply(agent_id, lambda a: reset_fault() if a == SELF_ID else peers.reset(a))
+
+
+@app.post("/api/agents/{agent_id}/faults/{name}")
+def agent_inject(agent_id: str, name: str) -> dict:
+    if name not in INJECTABLE:
+        raise HTTPException(status_code=404, detail=f"unknown fault: {name}")
+    return _apply(agent_id, lambda a: inject_fault(name) if a == SELF_ID else peers.inject(a, name))
 
 
 class ExplainSettingsIn(BaseModel):
