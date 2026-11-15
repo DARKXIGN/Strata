@@ -1,0 +1,23 @@
+session-grouped 5-fold CV on 1200 rows / 60 sessions
+accuracy 0.967, macro F1 0.966
+
+                 precision    recall  f1-score   support
+
+         normal      0.896     0.950     0.922       200
+   high_latency      1.000     0.995     0.997       200
+    packet_loss      0.930     0.865     0.896       200
+bandwidth_limit      1.000     1.000     1.000       200
+       dns_slow      1.000     1.000     1.000       200
+    dns_failure      0.975     0.990     0.983       200
+
+       accuracy                          0.967      1200
+      macro avg      0.967     0.967     0.966      1200
+   weighted avg      0.967     0.967     0.966      1200
+
+anomaly detector trained on normal rows only (session-grouped 5-fold):
+  normal rows flagged: 2.5%
+  high_latency rows flagged: 100.0%
+  packet_loss rows flagged: 85.0%
+  bandwidth_limit rows flagged: 100.0%
+  dns_slow rows flagged: 100.0%
+  dns_failure rows flagged: 100.0%

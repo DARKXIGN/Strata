@@ -11,6 +11,32 @@
   --bad: #dc2626;
   --bad-soft: #fdecec;
   --radius: 24px;
+  --on-accent: #ffffff;
+  --on-status: #ffffff;
+  --card-border: transparent;
+  --warn-soft: #fff4e5;
+}
+
+/* High-contrast dark version. */
+:root[data-theme="contrast"] {
+  /* High-contrast dark: black background, white text, one bright blue accent for
+     pressable and highlighted things; structure is neutral gray. */
+  --bg: #000000;
+  --card: #0b0b0b;
+  --text: #ffffff;
+  --text-sub: #c4cad1;
+  --line: #3d3d3d;
+  --accent: #6aa8ff;
+  --accent-soft: #0e1a2e;
+  --ok: #4ade80;
+  --ok-soft: transparent;
+  --bad: #ff6b6b;
+  --bad-soft: transparent;
+  --on-accent: #000000;
+  --on-status: #000000;
+  --card-border: #2e2e2e;
+  --warn-soft: #1c1c1c;
+  --control-border: #6aa8ff;
 }
 
 * {
@@ -22,6 +48,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: "Pretendard", sans-serif;
+  transition: background 0.2s, color 0.2s;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
@@ -40,6 +67,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
@@ -51,6 +79,8 @@ button {
 
 .badges {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -76,11 +106,13 @@ button {
 
 @media (max-width: 860px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 .card {
+  min-width: 0;
+  border: 2px solid var(--card-border);
   background: var(--card);
   border-radius: var(--radius);
   padding: 24px;
@@ -109,24 +141,115 @@ button {
 
 /* Strata view */
 .strata {
+  --rail-x: 30px;
+  position: relative;
   list-style: none;
-  margin: 0;
+  margin: 4px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+
+/* The drill line: grey rail, blue fill down to the current dig depth. */
+.strata::before,
+.strata::after {
+  content: "";
+  position: absolute;
+  left: var(--rail-x);
+  top: 24px;
+  width: 2px;
+  border-radius: 2px;
+  transform: translateX(-1px);
+}
+
+.strata::before {
+  bottom: 24px;
+  background: var(--line);
+}
+
+.strata::after {
+  background: var(--accent);
+  height: calc((100% - 48px) * min(var(--depth), var(--count) - 1) / max(var(--count) - 1, 1));
+  transition: height 0.3s ease;
 }
 
 .stratum {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 14px;
+  gap: 14px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 16px;
+  background: transparent;
   transition: background 0.3s;
 }
 
-.stratum-ok {
+.stratum-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 0 0 2px var(--line);
+  transition: box-shadow 0.3s, opacity 0.3s;
+}
+
+.stratum-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stratum-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stratum-evidence {
+  font-size: 13px;
+  color: var(--text-sub);
+  overflow-wrap: anywhere;
+}
+
+.stratum-state {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.stratum-pending .stratum-icon {
+  opacity: 0.35;
+}
+
+.stratum-pending .stratum-name {
+  color: var(--text-sub);
+}
+
+.stratum-digging {
+  background: var(--accent-soft);
+}
+
+.stratum-digging .stratum-icon {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.stratum-digging .stratum-state {
+  color: var(--accent);
+}
+
+.stratum-ok .stratum-icon {
+  box-shadow: 0 0 0 2px var(--ok);
+}
+
+.stratum-ok .stratum-state {
+  color: var(--ok);
   background: var(--ok-soft);
 }
 
@@ -134,44 +257,64 @@ button {
   background: var(--bad-soft);
 }
 
-.stratum-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.stratum-ok .stratum-dot {
-  background: var(--ok);
-}
-
-.stratum-problem .stratum-dot {
-  background: var(--bad);
-}
-
-.stratum-name {
-  flex: 1;
-  font-weight: 600;
-}
-
-.stratum-state {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.stratum-ok .stratum-state {
-  color: var(--ok);
+.stratum-problem .stratum-icon {
+  box-shadow: 0 0 0 2px var(--bad);
 }
 
 .stratum-problem .stratum-state {
-  color: var(--bad);
+  color: var(--on-status);
+  background: var(--bad);
+}
+
+.stratum-unmeasured .stratum-state {
+  color: var(--text-sub);
+  background: var(--bg);
+}
+
+.stratum-unmeasured .stratum-icon {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strata::after,
+  .stratum,
+  .stratum-icon {
+    transition: none;
+  }
 }
 
 /* Diagnosis */
+.diagnosis-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 8px 0;
+}
+
 .diagnosis-label {
   font-size: 22px;
   font-weight: 700;
   color: var(--accent);
-  margin: 8px 0 8px;
+}
+
+.diagnosis-conf {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.pill-warn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.diagnosis-foot {
+  margin-top: auto;
 }
 
 .actions {
@@ -219,7 +362,8 @@ button {
 /* Live chart */
 .stats {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 8px 24px;
   margin: 8px 0 12px;
 }
 
@@ -244,8 +388,126 @@ button {
 }
 
 .chart {
+  width: 100%;
+}
+
+.chart-main {
   flex: 1;
-  min-height: 200px;
+  min-height: 180px;
+}
+
+.chart-loss {
+  height: 88px;
+}
+
+.chart-subtitle {
+  margin: 8px 0 0;
+}
+
+.fault-note {
+  margin: 0 0 8px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 4px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.legend-dashed {
+  height: 0;
+  border-top: 3px dashed;
+  border-radius: 0;
+}
+
+.legend-rule {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  border-radius: 1px;
+}
+
+.legend-rule-dashed {
+  width: 0;
+  border-left: 2px dashed;
+}
+
+.chart-tooltip {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+  min-width: 150px;
+}
+
+.chart-tooltip-time {
+  color: var(--text-sub);
+  margin-bottom: 4px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.7;
+}
+
+.chart-tooltip-name {
+  flex: 1;
+  color: var(--text-sub);
+}
+
+.chart-tooltip-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Info area */
+.info {
+  margin-top: 24px;
+  padding: 0 8px;
+}
+
+.info a {
+  color: var(--text-sub);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.license {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-sub);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin: 8px 0 0;
 }
 
 /* Fault panel */
@@ -278,7 +540,7 @@ button {
 
 .fault-btn-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .fault-btn-active:hover {
@@ -295,4 +557,613 @@ button {
 .fault-btn:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+/* Header button */
+.header-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.header-btn:hover {
+  background: var(--line);
+}
+
+/* Settings dialog */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(25, 31, 40, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 10;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px;
+  outline: none;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg);
+  border-radius: 14px;
+  margin: 8px 0;
+}
+
+.segment {
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 8px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+
+.segment-on {
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 8px 0 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field-optional {
+  font-weight: 400;
+  color: var(--text-sub);
+}
+
+.field-note {
+  margin: 0;
+}
+
+.input {
+  font-family: inherit;
+  font-size: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+}
+
+.input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.notice {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+
+.notice-ok {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.notice-bad {
+  background: var(--bad-soft);
+  color: var(--text);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn {
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-soft {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-sub);
+}
+
+/* Why this diagnosis */
+.card-wide {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.why-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 16px 40px;
+  margin-top: 8px;
+}
+
+@media (max-width: 860px) {
+  .why-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.why-sub {
+  margin: 0 0 10px;
+}
+
+.why-legend {
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.prob-row-top .prob-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.contribs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contrib-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 1.3fr) 40px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.contrib-name {
+  overflow-wrap: anywhere;
+}
+
+.contrib-value {
+  color: var(--text-sub);
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.contrib-track {
+  position: relative;
+  height: 10px;
+}
+
+.contrib-axis {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--line);
+}
+
+.contrib-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.contrib-pos,
+.contrib-key-pos {
+  background: var(--accent);
+}
+
+.contrib-neg,
+.contrib-key-neg {
+  background: var(--text-sub);
+  opacity: 0.45;
+}
+
+.contrib-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin: 0 4px 0 6px;
+  vertical-align: -1px;
+}
+
+.contrib-num {
+  text-align: right;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.anomaly {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.anomaly-ok {
+  background: var(--bg);
+  color: var(--text-sub);
+}
+
+.anomaly-info {
+  background: var(--accent-soft);
+}
+
+.anomaly-warn {
+  background: var(--warn-soft);
+  border: 1px solid var(--line);
+}
+
+/* High-contrast tweaks */
+:root[data-theme="contrast"] .fault-btn,
+:root[data-theme="contrast"] .reset-btn,
+:root[data-theme="contrast"] .header-btn,
+:root[data-theme="contrast"] .btn-soft,
+:root[data-theme="contrast"] .input {
+  background: transparent;
+  border: 2px solid var(--control-border);
+  color: var(--text);
+}
+
+:root[data-theme="contrast"] .fault-btn:hover,
+:root[data-theme="contrast"] .reset-btn:hover:not(:disabled),
+:root[data-theme="contrast"] .header-btn:hover {
+  background: var(--accent-soft);
+}
+
+:root[data-theme="contrast"] .fault-btn-active,
+:root[data-theme="contrast"] .fault-btn-active:hover,
+:root[data-theme="contrast"] .segment-on {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+:root[data-theme="contrast"] .badge {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-sub);
+}
+
+:root[data-theme="contrast"] .segmented {
+  border: 1px solid var(--line);
+}
+
+/* Status: colored outline + label, no muddy tinted fills. */
+:root[data-theme="contrast"] .stratum-ok .stratum-state {
+  color: var(--ok);
+  border: 1.5px solid var(--ok);
+  background: transparent;
+}
+
+:root[data-theme="contrast"] .stratum-problem {
+  box-shadow: inset 0 0 0 2px var(--bad);
+}
+
+:root[data-theme="contrast"] .stratum-problem .stratum-state {
+  background: var(--bad);
+  color: var(--on-status);
+}
+
+:root[data-theme="contrast"] .stratum-unmeasured .stratum-state {
+  background: transparent;
+  border: 1.5px solid var(--line);
+  color: var(--text-sub);
+}
+
+:root[data-theme="contrast"] .stratum-digging {
+  background: var(--accent-soft);
+}
+
+:root[data-theme="contrast"] .stratum-icon {
+  background: #1a1a1a;
+}
+
+:root[data-theme="contrast"] .prob-bar {
+  background: #262626;
+}
+
+:root[data-theme="contrast"] .anomaly-ok,
+:root[data-theme="contrast"] .anomaly-info,
+:root[data-theme="contrast"] .anomaly-warn {
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+}
+
+:root[data-theme="contrast"] .anomaly-warn {
+  border-color: var(--accent);
+}
+
+:root[data-theme="contrast"] .overlay {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+:root[data-theme="contrast"] .dialog,
+:root[data-theme="contrast"] .chart-tooltip,
+:root[data-theme="contrast"] .license {
+  border: 1px solid var(--line);
+}
+
+:root[data-theme="contrast"] .info a,
+:root[data-theme="contrast"] .link-btn {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* Diagnosis history */
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 76px 10px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+}
+
+.history-time,
+.history-conf {
+  font-size: 13px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-conf {
+  text-align: right;
+}
+
+.history-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.history-ok .history-dot {
+  background: var(--ok);
+}
+
+.history-bad .history-dot {
+  background: var(--bad);
+}
+
+.history-bad .history-label {
+  font-weight: 600;
+}
+
+.history-flag {
+  font-size: 13px;
+  color: var(--text-sub);
+  font-weight: 400;
+}
+
+.history-source,
+.region-source {
+  margin: 12px 0 0;
+}
+
+.empty {
+  margin-top: 8px;
+}
+
+/* Just me, or everyone? */
+.region-headline {
+  margin: 4px 0 12px;
+}
+
+.region {
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--line);
+}
+
+.region-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.region-name {
+  font-weight: 700;
+}
+
+.region-ratio {
+  margin: 0 0 0 auto;
+}
+
+.verdict {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+}
+
+.verdict-regional_outage {
+  background: var(--bad);
+  color: var(--on-status);
+}
+
+.verdict-individual_issue {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+.verdict-normal {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.verdict-no_data {
+  color: var(--text-sub);
+  background: var(--bg);
+}
+
+.timeline {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  height: 28px;
+  margin-top: 12px;
+}
+
+.timeline-bar {
+  position: relative;
+  border-radius: 4px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.timeline-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bad);
+  border-radius: 4px 4px 0 0;
+}
+
+.timeline-caption {
+  margin: 4px 0 8px;
+}
+
+.agent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agent-row:hover,
+.agent-selected {
+  background: var(--accent-soft);
+}
+
+.agent-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.agent-normal .agent-dot {
+  background: var(--ok);
+}
+
+.agent-abnormal .agent-dot {
+  background: var(--bad);
+}
+
+.agent-abnormal .agent-issue {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.agent-self {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.agent-issue {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+:root[data-theme="contrast"] .verdict-normal {
+  background: transparent;
+  border-color: var(--ok);
+}
+
+:root[data-theme="contrast"] .verdict-no_data,
+:root[data-theme="contrast"] .timeline-bar {
+  background: #262626;
 }
