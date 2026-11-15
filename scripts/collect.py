@@ -6,7 +6,7 @@ on Ctrl+C, on SIGTERM/SIGHUP (e.g. ssh drop), and on any error. If the process i
 killed with SIGKILL, run `sudo scripts/fault.sh reset` by hand.
 
 Data is collected in sessions: one fault with one random severity for N consecutive
-rows. Each row stores its session_id so training can split by session (CLAUDE.md).
+rows. Each row stores its session_id so training can split by session.
 Re-running with the same --out resumes: it only collects what each label still needs.
 
     sudo .venv/bin/python -m scripts.collect run --rows-per-class 5 --session-rows 5 --out data/raw/trial.csv

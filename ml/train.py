@@ -2,7 +2,7 @@
 
 Evaluation splits by collection session (StratifiedGroupKFold), never by row: rows of
 one session share a fault and a severity, so mixing them across train and test would
-inflate accuracy (CLAUDE.md). The final model is then fit on all rows.
+inflate accuracy. The final model is then fit on all rows.
 
     .venv/bin/python -m ml.train data/raw/main.csv
 

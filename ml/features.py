@@ -1,6 +1,6 @@
 """Model input: the measured features plus comparison features, as a float vector.
 
-Comparisons carry most of the signal (CLAUDE.md): "gateway fine but internet slow",
+Comparisons carry most of the signal: "gateway fine but internet slow",
 "IP works but name lookup fails". Missing values become NaN, which LightGBM handles.
 Wi-Fi columns are dropped: the OCI host has no Wi-Fi.
 """
