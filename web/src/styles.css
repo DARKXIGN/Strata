@@ -1167,3 +1167,75 @@ button {
 :root[data-theme="contrast"] .timeline-bar {
   background: #262626;
 }
+
+/* Fault panel: agent selector */
+.agent-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+
+.agent-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agent-chip:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.agent-chip-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.agent-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.agent-chip-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.agent-chip-self {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-sub);
+}
+
+.agent-chip-state {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.agent-chip-fault {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.fault-message {
+  margin: 0 0 8px;
+  color: var(--bad);
+}
+
+:root[data-theme="contrast"] .agent-chip {
+  background: transparent;
+}
+
+:root[data-theme="contrast"] .agent-chip-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
